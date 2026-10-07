@@ -2,6 +2,24 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 
+class ReminderItem {
+  String title;
+  String badge;
+  String subtitle;
+  IconData icon;
+  Color color;
+  bool enabled;
+
+  ReminderItem({
+    required this.title,
+    required this.badge,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    this.enabled = true,
+  });
+}
+
 class RemindersScreen extends StatefulWidget {
   const RemindersScreen({super.key});
 
@@ -11,11 +29,83 @@ class RemindersScreen extends StatefulWidget {
 
 class _RemindersScreenState extends State<RemindersScreen> {
   bool _masterSwitch = true;
-  bool _mornSwitch = true;
-  bool _eveSwitch = true;
-  bool _weekendSwitch = false;
   bool _inactivitySwitch = true;
   bool _motiSwitch = true;
+
+  final List<ReminderItem> _reminders = [
+    ReminderItem(title: 'Morning Workout', badge: 'HIGH INTENSITY', subtitle: '07:00 AM • Daily • Push & Core', icon: Icons.wb_sunny_outlined, color: AppColors.warning),
+    ReminderItem(title: 'Evening Stretch', badge: 'RECOVERY', subtitle: '06:30 PM • Mon, Wed, Fri', icon: Icons.nightlight_round_outlined, color: AppColors.info),
+    ReminderItem(title: 'Weekend Cardio', badge: 'AEROBIC', subtitle: '09:00 AM • Sat, Sun • Outdoor', icon: Icons.directions_run_outlined, color: AppColors.brandTeal, enabled: false),
+  ];
+
+  void _openAddReminderDialog() {
+    final titleCtrl = TextEditingController();
+    final timeCtrl = TextEditingController(text: '08:00 AM');
+    String intensity = 'MODERATE';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Add Custom Reminder', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(labelText: 'Reminder Title (e.g. Core Workout)', prefixIcon: Icon(Icons.fitness_center)),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: timeCtrl,
+                decoration: const InputDecoration(labelText: 'Time (e.g. 08:00 AM)', prefixIcon: Icon(Icons.access_time)),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: intensity,
+                decoration: const InputDecoration(labelText: 'Intensity', contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                items: const ['HIGH INTENSITY', 'MODERATE', 'RECOVERY', 'AEROBIC']
+                    .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+                    .toList(),
+                onChanged: (v) => setDialogState(() => intensity = v!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+              onPressed: () {
+                final title = titleCtrl.text.trim();
+                final time = timeCtrl.text.trim();
+                if (title.isNotEmpty) {
+                  setState(() {
+                    _reminders.add(
+                      ReminderItem(
+                        title: title,
+                        badge: intensity,
+                        subtitle: '$time • Daily',
+                        icon: Icons.notifications_active_outlined,
+                        color: AppColors.brandTeal,
+                      ),
+                    );
+                  });
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Reminder "$title" added successfully!')),
+                  );
+                }
+              },
+              child: const Text('Save Reminder', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +133,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: TextButton.icon(
-              onPressed: () {},
+              onPressed: _openAddReminderDialog,
               icon: const Icon(Icons.add, size: 16, color: AppColors.brandTeal),
               label: const Text('New', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 12)),
             ),
@@ -69,10 +159,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text('Enable Reminders • Active', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.brandTeal)),
-                        SizedBox(height: 2),
-                        Text('Smart notifications active • 3 Scheduled', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                      children: [
+                        Text(_masterSwitch ? 'Enable Reminders • Active' : 'Reminders Muted', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.brandTeal)),
+                        const SizedBox(height: 2),
+                        Text(_masterSwitch ? 'Smart notifications active • ${_reminders.where((r) => r.enabled).length} Scheduled' : 'All alerts paused', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -87,20 +177,19 @@ class _RemindersScreenState extends State<RemindersScreen> {
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                Text('ACTIVE SCHEDULES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
-                Text('3 Configured', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+              children: [
+                const Text('ACTIVE SCHEDULES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                Text('${_reminders.length} Configured', style: const TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 10),
-            _reminderTile('Morning Workout', 'HIGH INTENSITY', '07:00 AM • Daily • Push & Core', Icons.wb_sunny_outlined, AppColors.warning, _mornSwitch, (v) => setState(() => _mornSwitch = v)),
-            const SizedBox(height: 10),
-            _reminderTile('Evening Stretch', 'RECOVERY', '06:30 PM • Mon, Wed, Fri', Icons.nightlight_round_outlined, AppColors.info, _eveSwitch, (v) => setState(() => _eveSwitch = v)),
-            const SizedBox(height: 10),
-            _reminderTile('Weekend Cardio', 'AEROBIC', '09:00 AM • Sat, Sun • Outdoor', Icons.directions_run_outlined, AppColors.brandTeal, _weekendSwitch, (v) => setState(() => _weekendSwitch = v)),
-            const SizedBox(height: 14),
+            ..._reminders.map((r) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _reminderTile(r, (v) => setState(() => r.enabled = v)),
+                )),
+            const SizedBox(height: 4),
             OutlinedButton.icon(
-              onPressed: () {},
+              onPressed: _openAddReminderDialog,
               icon: const Icon(Icons.add, size: 16, color: AppColors.brandTeal),
               label: const Text('Add Custom Reminder', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
               style: OutlinedButton.styleFrom(
@@ -121,12 +210,12 @@ class _RemindersScreenState extends State<RemindersScreen> {
     );
   }
 
-  Widget _reminderTile(String title, String badge, String subtitle, IconData icon, Color color, bool value, ValueChanged<bool> onChanged) {
+  Widget _reminderTile(ReminderItem r, ValueChanged<bool> onChanged) {
     return AppCard(
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          CircleAvatar(radius: 16, backgroundColor: color.withOpacity(0.12), child: Icon(icon, color: color, size: 18)),
+          CircleAvatar(radius: 16, backgroundColor: r.color.withOpacity(0.12), child: Icon(r.icon, color: r.color, size: 18)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -134,24 +223,24 @@ class _RemindersScreenState extends State<RemindersScreen> {
               children: [
                 Row(
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(r.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     const SizedBox(width: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
-                      child: Text(badge, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
+                      decoration: BoxDecoration(color: r.color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+                      child: Text(r.badge, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: r.color)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                Text(r.subtitle, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
               ],
             ),
           ),
           Switch(
-            value: value,
+            value: r.enabled && _masterSwitch,
             activeColor: AppColors.brandTeal,
-            onChanged: onChanged,
+            onChanged: _masterSwitch ? onChanged : null,
           ),
         ],
       ),

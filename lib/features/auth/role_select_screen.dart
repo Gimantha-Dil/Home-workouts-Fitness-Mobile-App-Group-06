@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/models/user_role.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/common_widgets.dart';
 import '../advisor/advisor_registration_screen.dart';
 import '../trainer/trainer_registration_screen.dart';
 import 'login_screen.dart';
@@ -29,8 +30,8 @@ class RoleSelectScreen extends StatelessWidget {
         ),
         title: Row(
           children: const [
-            Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 24),
-            SizedBox(width: 6),
+            AppLogoIcon(size: 26),
+            SizedBox(width: 8),
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),

@@ -5,7 +5,8 @@ class AppColors {
   // Unified FitPulse brand teal, used across every role — matches the
   // production Hi-Fi mockups where all portals (customer, trainer,
   // advisor, admin) share the same teal identity.
-  static const brandTeal = Color(0xFF0D9488);
+  static const brandTeal = Color(0xFF00A896);
+  static const brandBlue = Color(0xFF0284C7);
   static const brandTealLight = Color(0xFF14B8A6);
   static const brandTealDark = Color(0xFF0F3D3A);
 
@@ -24,6 +25,12 @@ class AppColors {
   static const textPrimary = Color(0xFF0F172A);
   static const textSecondary = Color(0xFF6B7280);
   static const border = Color(0xFFEDF0F2);
+
+  static const buttonGradient = LinearGradient(
+    colors: [Color(0xFF00A896), Color(0xFF00A896), Color(0xFF0284C7)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
 
   static const splashGradient = LinearGradient(
     begin: Alignment.topCenter,

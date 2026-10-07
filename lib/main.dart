@@ -95,7 +95,7 @@ class _UnauthFlowState extends State<UnauthFlow> {
     _showSplash = !UnauthFlow.splashAlreadyShown;
     if (_showSplash) {
       UnauthFlow.splashAlreadyShown = true;
-      Future.delayed(const Duration(milliseconds: 1500), () {
+      Future.delayed(const Duration(seconds: 6), () {
         if (mounted) {
           setState(() => _showSplash = false);
         }

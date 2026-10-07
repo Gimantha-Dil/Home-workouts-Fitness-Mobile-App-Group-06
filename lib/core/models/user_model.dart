@@ -5,13 +5,30 @@ class User {
   final String name;
   final String email;
   final UserRole role;
+  final String? profilePhotoUrl;
 
   const User({
     required this.id,
     required this.name,
     required this.email,
     required this.role,
+    this.profilePhotoUrl,
   });
+
+  User copyWith({
+    String? name,
+    String? email,
+    UserRole? role,
+    String? profilePhotoUrl,
+  }) {
+    return User(
+      id: id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
+    );
+  }
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -22,6 +39,7 @@ class User {
         (r) => r.name == json['role'],
         orElse: () => UserRole.customer,
       ),
+      profilePhotoUrl: json['profile_photo_url'],
     );
   }
 
@@ -31,6 +49,7 @@ class User {
       'name': name,
       'email': email,
       'role': role.name,
+      'profile_photo_url': profilePhotoUrl,
     };
   }
 }

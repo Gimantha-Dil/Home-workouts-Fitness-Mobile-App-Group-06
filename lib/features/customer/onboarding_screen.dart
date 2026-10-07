@@ -95,14 +95,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // Onboarding Page 1 (Centered Layout)
+  // Unified Top Header with Back button (if index > 0), Logo, and Skip button
+  Widget _buildTopHeader(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            if (_index > 0) ...[
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.brandTeal),
+                onPressed: () {
+                  _controller.previousPage(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeInOut,
+                  );
+                },
+              ),
+              const SizedBox(width: 4),
+            ],
+            const AppLogoIcon(size: 26),
+            const SizedBox(width: 8),
+            const Text('FitPulse', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.brandTeal)),
+          ],
+        ),
+        TextButton(
+          onPressed: _finishOnboarding,
+          child: const Text('Skip', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+        ),
+      ],
+    );
+  }
+
+  // Onboarding Page 1
   Widget _buildPage1(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          _buildTopHeader(context),
+          const SizedBox(height: 12),
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
@@ -110,7 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 width: double.infinity,
                 decoration: const BoxDecoration(
                   image: DecorationImage(
-                    image: NetworkImage('https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop'),
+                    image: AssetImage('assets/images/onborad.jpeg'),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -135,78 +167,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // Onboarding Page 2 (Centered Layout)
+  // Onboarding Page 2
   Widget _buildPage2(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: const [
-                  Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 24),
-                  SizedBox(width: 6),
-                  Text('FitPulse', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.brandTeal)),
-                ],
-              ),
-              TextButton(
-                onPressed: _finishOnboarding,
-                child: const Text('Skip', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-          const Spacer(),
-          // Graphic Card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFE0F2FE), Color(0xFFCCFBF1)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+          _buildTopHeader(context),
+          const SizedBox(height: 12),
+          Expanded(
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 10, offset: Offset(0, 4))],
-            ),
-            child: Column(
-              children: [
-                Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    const CircleAvatar(
-                      radius: 38,
-                      backgroundColor: AppColors.brandTeal,
-                      child: Icon(Icons.self_improvement, color: Colors.white, size: 38),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: const Icon(Icons.bolt, size: 14, color: AppColors.brandTeal),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.auto_awesome, size: 13, color: AppColors.brandTeal),
-                      SizedBox(width: 6),
-                      Text('Adaptive Plans: AI Guided', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                    ],
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/ON2.jpeg'),
+                    fit: BoxFit.cover,
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 20),
           const Text(
             'Personalized Workouts\nTailored to You',
             textAlign: TextAlign.center,
@@ -218,7 +201,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
             children: const [
               Expanded(child: _FeatureBadge(icon: Icons.timer_outlined, title: '15-30 Min', sub: 'Quick & Daily')),
@@ -228,116 +211,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Expanded(child: _FeatureBadge(icon: Icons.fitness_center_outlined, title: 'No Equipment', sub: 'Bodyweight')),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  // Onboarding Page 3 (Redesigned Beautiful Card & Centered Layout)
+  // Onboarding Page 3
   Widget _buildPage3(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: const [
-                  Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 24),
-                  SizedBox(width: 6),
-                  Text('FitPulse', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.brandTeal)),
-                ],
-              ),
-              TextButton(
-                onPressed: _finishOnboarding,
-                child: const Text('Skip', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-          const Spacer(),
-          // Beautiful Redesigned Card for Page 3
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFEF3C7), Color(0xFFCCFBF1), Color(0xFFE0F2FE)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+          _buildTopHeader(context),
+          const SizedBox(height: 12),
+          Expanded(
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 12, offset: Offset(0, 4))],
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.local_fire_department, size: 14, color: AppColors.warning),
-                          SizedBox(width: 4),
-                          Text('7-Day Streak!', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.emoji_events, size: 14, color: AppColors.brandTeal),
-                          SizedBox(width: 4),
-                          Text('Level 3 Pro', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                // Circular Milestone Badge
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                  child: Column(
-                    children: const [
-                      Icon(Icons.trending_up, color: AppColors.brandTeal, size: 24),
-                      SizedBox(height: 2),
-                      Text('+34%', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                    ],
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/On3.jpeg'),
+                    fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text('Goal reached today', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text('Daily Target Progress', style: TextStyle(fontSize: 9, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-                    Text('85% Complete', style: TextStyle(fontSize: 9, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: const LinearProgressIndicator(
-                    value: 0.85,
-                    minHeight: 7,
-                    backgroundColor: Colors.white,
-                    valueColor: AlwaysStoppedAnimation(AppColors.brandTeal),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 20),
           const Text(
             'Track Your Daily Progress &\nMilestones',
             textAlign: TextAlign.center,
@@ -349,7 +251,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
             children: const [
               Expanded(child: _FeatureBadge(icon: Icons.local_fire_department_outlined, title: 'Calorie Logs', sub: 'Burn metrics')),
@@ -359,7 +261,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Expanded(child: _FeatureBadge(icon: Icons.shield_outlined, title: 'Safety First', sub: 'Doctor tips')),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 12),
         ],
       ),
     );
