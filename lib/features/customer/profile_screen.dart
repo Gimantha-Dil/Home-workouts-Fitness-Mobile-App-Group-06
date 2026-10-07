@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/mock_data.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'profile_setup_screen.dart';
@@ -22,6 +24,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
     );
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      if (pickedFile != null) {
+        _showSnack('Uploading profile picture to Supabase Storage...');
+        final bytes = await pickedFile.readAsBytes();
+        final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+        final publicUrl = await SupabaseService.uploadUserPhoto(
+          fileName: fileName,
+          photoBytes: bytes,
+        );
+
+        if (mounted) {
+          context.read<AuthProvider>().updateProfilePhoto(publicUrl);
+          _showSnack('Profile picture updated successfully via Supabase!');
+        }
+      }
+    } catch (e) {
+      _showSnack('Error uploading photo: $e');
+    }
   }
 
   void _openHealthSyncDialog() {
@@ -255,19 +281,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Center(
               child: Column(
                 children: [
-                  Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      const CircleAvatar(
-                        radius: 40,
-                        backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop'),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
-                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 12),
-                      ),
-                    ],
+                  GestureDetector(
+                    onTap: _pickAndUploadAvatar,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundImage: user?.profilePhotoUrl != null && user!.profilePhotoUrl!.isNotEmpty
+                              ? NetworkImage(user.profilePhotoUrl!)
+                              : const NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop') as ImageProvider,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
+                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 12),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Row(
