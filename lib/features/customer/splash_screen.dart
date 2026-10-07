@@ -1,8 +1,33 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    );
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,22 +60,33 @@ class SplashScreen extends StatelessWidget {
                   style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12, letterSpacing: 2),
                 ),
                 const Spacer(flex: 3),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: LinearProgressIndicator(
-                    value: 0.64,
-                    minHeight: 4,
-                    backgroundColor: Colors.white.withOpacity(0.15),
-                    valueColor: const AlwaysStoppedAnimation(Colors.white),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Loading...', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
-                    Text('64%', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
-                  ],
+                AnimatedBuilder(
+                  animation: _animation,
+                  builder: (context, child) {
+                    final progress = _animation.value;
+                    final percentage = (progress * 100).toInt();
+                    return Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 4,
+                            backgroundColor: Colors.white.withOpacity(0.15),
+                            valueColor: const AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Loading...', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
+                            Text('$percentage%', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12)),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
