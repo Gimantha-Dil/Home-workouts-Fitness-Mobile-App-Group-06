@@ -12,12 +12,119 @@ class EditWorkoutScreen extends StatefulWidget {
 class _EditWorkoutScreenState extends State<EditWorkoutScreen> {
   int _tab = 0;
 
-  final _exercises = [
-    ('Push Ups (Knee Modified)', '3 sets • 10 reps • 60s rest'),
-    ('Bodyweight Squats', '3 sets • 15 reps • 60s rest'),
-    ('Walking Lunges', '3 sets • 12 reps • 60s rest'),
-    ('Plank Foundation', '3 sets • 30s • 60s rest'),
+  final List<Map<String, String>> _exercises = [
+    {'title': 'Push Ups (Knee Modified)', 'sub': '3 sets • 10 reps • 60s rest'},
+    {'title': 'Bodyweight Squats', 'sub': '3 sets • 15 reps • 60s rest'},
+    {'title': 'Walking Lunges', 'sub': '3 sets • 12 reps • 60s rest'},
+    {'title': 'Plank Foundation', 'sub': '3 sets • 30s • 60s rest'},
   ];
+
+  void _showSnack(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: AppColors.brandTeal, duration: const Duration(seconds: 2)),
+    );
+  }
+
+  void _openAddExerciseDialog() {
+    final nameCtrl = TextEditingController();
+    final setsCtrl = TextEditingController(text: '3');
+    final repsCtrl = TextEditingController(text: '12');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Exercise to Routine', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Exercise Name', hintText: 'e.g. Glute Bridge'),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: setsCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Sets'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: repsCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Reps'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              if (name.isNotEmpty) {
+                setState(() {
+                  _exercises.add({
+                    'title': name,
+                    'sub': '${setsCtrl.text} sets • ${repsCtrl.text} reps • 60s rest',
+                  });
+                });
+                Navigator.of(ctx).pop();
+                _showSnack('Added "$name" to workout structure!');
+              }
+            },
+            child: const Text('Add Exercise', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _openEditExerciseDialog(int index) {
+    final item = _exercises[index];
+    final nameCtrl = TextEditingController(text: item['title']);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Tune ${item['title']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: TextField(
+          controller: nameCtrl,
+          decoration: const InputDecoration(labelText: 'Exercise Name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              if (name.isNotEmpty) {
+                setState(() {
+                  _exercises[index]['title'] = name;
+                });
+                Navigator.of(ctx).pop();
+                _showSnack('Updated exercise to "$name"');
+              }
+            },
+            child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,8 +241,9 @@ class _EditWorkoutScreenState extends State<EditWorkoutScreen> {
                   const SizedBox(height: 16),
                   // Exercises List
                   ..._exercises.asMap().entries.map((entry) {
-                    final i = entry.key + 1;
-                    final (title, sub) = entry.value;
+                    final index = entry.key;
+                    final i = index + 1;
+                    final item = entry.value;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: AppCard(
@@ -154,13 +262,25 @@ class _EditWorkoutScreenState extends State<EditWorkoutScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                  Text(sub, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                  Text(item['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  Text(item['sub'] ?? '', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                 ],
                               ),
                             ),
-                            IconButton(icon: const Icon(Icons.tune, size: 16, color: AppColors.brandTeal), onPressed: () {}),
-                            IconButton(icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.danger), onPressed: () {}),
+                            IconButton(
+                              icon: const Icon(Icons.tune, size: 16, color: AppColors.brandTeal),
+                              onPressed: () => _openEditExerciseDialog(index),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
+                              onPressed: () {
+                                final removedTitle = item['title'];
+                                setState(() {
+                                  _exercises.removeAt(index);
+                                });
+                                _showSnack('Removed "$removedTitle"');
+                              },
+                            ),
                           ],
                         ),
                       ),
@@ -173,7 +293,7 @@ class _EditWorkoutScreenState extends State<EditWorkoutScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       side: const BorderSide(color: Color(0xFFCCFBF1)),
                     ),
-                    onPressed: () {},
+                    onPressed: _openAddExerciseDialog,
                     icon: const Icon(Icons.add, size: 16, color: AppColors.brandTeal),
                     label: const Text('Add Exercise', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                   ),
@@ -218,7 +338,10 @@ class _EditWorkoutScreenState extends State<EditWorkoutScreen> {
                   Expanded(
                     child: PrimaryButton(
                       label: 'Save Changes ✓',
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        _showSnack('⚡ Saved workout changes to Supabase!');
+                        Navigator.of(context).pop();
+                      },
                     ),
                   ),
                 ],

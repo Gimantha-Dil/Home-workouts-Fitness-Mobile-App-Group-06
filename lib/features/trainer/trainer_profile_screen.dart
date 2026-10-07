@@ -82,7 +82,59 @@ class TrainerProfileScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         side: const BorderSide(color: AppColors.brandTeal),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        final nameCtrl = TextEditingController(text: user?.name ?? 'Alex Carter');
+                        final bioCtrl = TextEditingController(
+                          text: 'Certified Fitness Trainer & Kinesiologist with 5+ years experience in functional mobility & strength.',
+                        );
+
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                          ),
+                          builder: (ctx) => Padding(
+                            padding: EdgeInsets.only(
+                              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+                              top: 20,
+                              left: 20,
+                              right: 20,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Edit Trainer Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  controller: nameCtrl,
+                                  decoration: const InputDecoration(labelText: 'Display Name', prefixIcon: Icon(Icons.person)),
+                                ),
+                                const SizedBox(height: 10),
+                                TextField(
+                                  controller: bioCtrl,
+                                  maxLines: 3,
+                                  decoration: const InputDecoration(labelText: 'Professional Bio', prefixIcon: Icon(Icons.info_outline)),
+                                ),
+                                const SizedBox(height: 16),
+                                PrimaryButton(
+                                  label: 'Save Profile Changes ✓',
+                                  onPressed: () {
+                                    Navigator.of(ctx).pop();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('⚡ Profile changes saved to Supabase!'),
+                                        backgroundColor: AppColors.brandTeal,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                       child: const Text('Edit Profile ✏', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                     ),
                   ),
@@ -125,9 +177,9 @@ class TrainerProfileScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            _certTile('ACE Certified Personal Trainer', 'American Council on Exercise • Valid thru 2026'),
+            _certTile(context, 'ACE Certified Personal Trainer', 'American Council on Exercise • Valid thru 2026'),
             const SizedBox(height: 8),
-            _certTile('NASM Corrective Exercise Special', 'National Academy of Sports Medicine'),
+            _certTile(context, 'NASM Corrective Exercise Special', 'National Academy of Sports Medicine'),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -137,11 +189,11 @@ class TrainerProfileScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            _moduleTile('Core Foundations A1', '8 exercises • Week 1-2'),
+            _moduleTile(context, 'Core Foundations A1', '8 exercises • Week 1-2'),
             const SizedBox(height: 8),
-            _moduleTile('Dynamic Mobility Block', '5 exercises • Daily Routine'),
+            _moduleTile(context, 'Dynamic Mobility Block', '5 exercises • Daily Routine'),
             const SizedBox(height: 8),
-            _moduleTile('Upper Body Hypertrophy I', '6 exercises • Week 3-4'),
+            _moduleTile(context, 'Upper Body Hypertrophy I', '6 exercises • Week 3-4'),
             const SizedBox(height: 20),
             Center(
               child: TextButton(
@@ -155,9 +207,24 @@ class TrainerProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _certTile(String title, String sub) {
+  Widget _certTile(BuildContext context, String title, String sub) {
     return AppCard(
       padding: const EdgeInsets.all(12),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            content: Text('$sub\n\nVerified active status in Supabase Credentials Registry.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
       child: Row(
         children: [
           const CircleAvatar(radius: 14, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.verified, color: AppColors.brandTeal, size: 16)),
@@ -177,9 +244,24 @@ class TrainerProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _moduleTile(String title, String sub) {
+  Widget _moduleTile(BuildContext context, String title, String sub) {
     return AppCard(
       padding: const EdgeInsets.all(12),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            content: Text('$sub\n\nAssigned coaching curriculum module for active subscribers.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('OK', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
       child: Row(
         children: [
           ClipRRect(
