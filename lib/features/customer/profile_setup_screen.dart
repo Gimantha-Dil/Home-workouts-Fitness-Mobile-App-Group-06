@@ -177,7 +177,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                value: _ageRange,
+                initialValue: _ageRange,
                 decoration: const InputDecoration(
                   contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   prefixIcon: Icon(Icons.airline_seat_recline_normal, color: AppColors.brandTeal, size: 18),

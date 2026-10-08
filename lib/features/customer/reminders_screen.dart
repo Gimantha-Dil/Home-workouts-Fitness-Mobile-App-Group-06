@@ -388,7 +388,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   ),
                   Switch(
                     value: _masterSwitch,
-                    activeColor: AppColors.brandTeal,
+                    activeThumbColor: AppColors.brandTeal,
                     onChanged: (v) async {
                       setState(() => _masterSwitch = v);
                       await _syncRemindersWithService();
@@ -472,7 +472,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
           ),
           Switch(
             value: r.enabled && _masterSwitch,
-            activeColor: AppColors.brandTeal,
+            activeThumbColor: AppColors.brandTeal,
             onChanged: _masterSwitch ? onChanged : null,
           ),
         ],
@@ -497,7 +497,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
           ),
           Switch(
             value: value,
-            activeColor: AppColors.brandTeal,
+            activeThumbColor: AppColors.brandTeal,
             onChanged: onChanged,
           ),
         ],

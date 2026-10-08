@@ -104,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: const Text('Apple Health Sync', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                 subtitle: const Text('Active heart rate & calorie burn telemetry', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                 value: _appleHealthSync,
-                activeColor: AppColors.brandTeal,
+                activeThumbColor: AppColors.brandTeal,
                 onChanged: (v) {
                   setSheetState(() => _appleHealthSync = v);
                   setState(() => _appleHealthSync = v);
@@ -114,7 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: const Text('Google Fit & Health Connect', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                 subtitle: const Text('Daily step count & active minutes tracking', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                 value: _googleFitSync,
-                activeColor: AppColors.brandTeal,
+                activeThumbColor: AppColors.brandTeal,
                 onChanged: (v) {
                   setSheetState(() => _googleFitSync = v);
                   setState(() => _googleFitSync = v);
@@ -230,8 +230,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: const [
+            const Row(
+              children: [
                 CircleAvatar(radius: 14, backgroundColor: Color(0xFFFEF3C7), child: Icon(Icons.support_agent, color: AppColors.warning, size: 16)),
                 SizedBox(width: 8),
                 Text('Contact Trainer Support', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
@@ -268,10 +268,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Kinetic Pulse Engine Architecture', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('App Version: v2.4.0 (Build 342)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
             SizedBox(height: 4),
             Text('Telemetry Protocol: Real-time Biometric Stream v4.12', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
@@ -398,9 +398,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: _openLanguageDialog,
             ),
             const SizedBox(height: 20),
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 Text('PRIVACY & SECURITY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
                 Icon(Icons.shield_outlined, size: 14, color: AppColors.brandTeal),
               ],
@@ -421,10 +421,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   CircleAvatar(radius: 14, backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12), child: const Icon(Icons.fingerprint, color: AppColors.brandTeal, size: 16)),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text('Biometric Face ID', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                         Text('Require biometric scan to unlock', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                       ],
@@ -432,7 +432,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Switch(
                     value: _faceId,
-                    activeColor: AppColors.brandTeal,
+                    activeThumbColor: AppColors.brandTeal,
                     onChanged: (v) {
                       setState(() => _faceId = v);
                       _showSnack(v ? 'Biometric Face ID Enabled' : 'Biometric Face ID Disabled');
@@ -451,9 +451,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onTap: _openPrivacyPolicyDialog,
             ),
             const SizedBox(height: 20),
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 Text('CLINICAL GOVERNANCE & SUPPORT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
                 Text('Accredited', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
               ],
@@ -507,9 +507,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     (route) => false,
                   );
                 },
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.logout, color: AppColors.danger, size: 18),
                     SizedBox(width: 8),
                     Text('Log Out', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),

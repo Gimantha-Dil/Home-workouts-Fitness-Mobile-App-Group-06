@@ -18,7 +18,7 @@ class TrainerSettingsScreen extends StatefulWidget {
 
 class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
   bool _coachingAvailable = true;
-  String _appearance = 'Light';
+  final String _appearance = 'Light';
   String _language = 'English';
 
   void _showSnack(String msg) {
@@ -73,9 +73,9 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Trainer Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Text('• Client Check-in Alerts: Enabled', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             SizedBox(height: 6),
             Text('• Moderation & QA Notices: Enabled', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -125,10 +125,10 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Certifications & Accreditation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('• ACE Certified Personal Trainer (#89421) ✓', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
             SizedBox(height: 6),
             Text('• NASM Corrective Exercise Specialist ✓', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.info)),
@@ -151,10 +151,10 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Workout Publishing Defaults', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('Default Rest Interval: 60 seconds', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             SizedBox(height: 4),
             Text('Default Rep Target: 10 reps / 3 sets', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -229,10 +229,10 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('About FitPulse Trainer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('FitPulse Trainer Studio v1.0.4', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             SizedBox(height: 4),
             Text('Builder 2.0 • Dynamic Pacing & Transcoding Engine', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
@@ -271,8 +271,8 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Text('Trainer Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(width: 6),
             Text('T13 // SYSTEM CONFIG', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
@@ -346,10 +346,10 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
                 children: [
                   CircleAvatar(radius: 14, backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12), child: const Icon(Icons.fitness_center, color: AppColors.brandTeal, size: 16)),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text('Coaching Availability', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                         Text('Accepting new trainee requests', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                       ],
@@ -363,7 +363,7 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
                   const SizedBox(width: 4),
                   Switch(
                     value: _coachingAvailable,
-                    activeColor: AppColors.brandTeal,
+                    activeThumbColor: AppColors.brandTeal,
                     onChanged: (v) {
                       setState(() => _coachingAvailable = v);
                       _showSnack(v ? 'Coaching status: Active' : 'Coaching status: Offline');
@@ -440,9 +440,9 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
                         (route) => false,
                   );
                 },
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.logout, color: AppColors.danger, size: 18),
                     SizedBox(width: 8),
                     Text('Log Out', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),

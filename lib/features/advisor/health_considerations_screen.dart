@@ -55,10 +55,10 @@ class _HealthConsiderationsScreenState extends State<HealthConsiderationsScreen>
                 padding: const EdgeInsets.all(20),
                 children: [
                   // Baseline Wellness Criteria Card
-                  AppCard(
-                    padding: const EdgeInsets.all(12),
+                  const AppCard(
+                    padding: EdgeInsets.all(12),
                     child: Row(
-                      children: const [
+                      children: [
                         Icon(Icons.verified, color: AppColors.brandTeal, size: 20),
                         SizedBox(width: 10),
                         Expanded(
@@ -142,8 +142,8 @@ class _HealthConsiderationsScreenState extends State<HealthConsiderationsScreen>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFBBF7D0))),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.info_outline, color: AppColors.brandTeal, size: 18),
                         SizedBox(width: 10),
                         Expanded(

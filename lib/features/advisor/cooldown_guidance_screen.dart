@@ -75,10 +75,10 @@ class CooldownGuidanceScreen extends StatelessWidget {
                       color: Colors.black87,
                       child: Stack(
                         children: [
-                          Positioned.fill(
+                          const Positioned.fill(
                             child: Opacity(
                               opacity: 0.65,
-                              child: const AppNetworkImage(
+                              child: AppNetworkImage(
                                 url: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop',
                                 height: 180,
                                 width: double.infinity,
@@ -116,26 +116,26 @@ class CooldownGuidanceScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   // Why Cool-down Card
-                  AppCard(
-                    padding: const EdgeInsets.all(16),
+                  const AppCard(
+                    padding: EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: const [
+                          children: [
                             Icon(Icons.favorite_border, color: AppColors.brandTeal, size: 18),
                             SizedBox(width: 8),
                             Text('Why Cool-down?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        const Text(
+                        SizedBox(height: 6),
+                        Text(
                           'A deliberate cool-down helps your heart rate gradually return to baseline, decreases post-exercise muscle soreness, and steadily enhances long-term joint flexibility.',
                           style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.4),
                         ),
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
                         Row(
-                          children: const [
+                          children: [
                             Expanded(child: _CoolChip(label: 'Heart Rate', sub: 'Gradual recovery', color: AppColors.info)),
                             SizedBox(width: 6),
                             Expanded(child: _CoolChip(label: 'Flexibility', sub: 'Lengthen fibers', color: AppColors.brandTeal)),
@@ -147,9 +147,9 @@ class CooldownGuidanceScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Recommended Cool-down', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       Text('0 / 4 completed', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                     ],
@@ -218,7 +218,7 @@ class _CoolChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
       child: Column(
         children: [
           Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),

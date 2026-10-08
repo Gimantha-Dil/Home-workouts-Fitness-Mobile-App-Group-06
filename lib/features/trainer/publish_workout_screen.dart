@@ -68,7 +68,7 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final checklist = const [
+    const checklist = [
       'Workout details',
       'All exercises with instructions',
       'Video uploads',

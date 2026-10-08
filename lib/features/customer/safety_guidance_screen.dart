@@ -11,7 +11,7 @@ class SafetyGuidanceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tips = const [
+    const tips = [
       ('PREPARATION', 'Warm up for 5–10 minutes', 'Gradually elevate heart rate and joint temperature prior to dynamic load.', Icons.timer_outlined, AppColors.warning),
       ('MOVEMENT QUALITY', 'Use proper form over load', 'Focus on alignment, controlled tempo, and avoiding pushing yourself past technical failure.', Icons.warning_amber_rounded, AppColors.danger),
       ('PHYSIOLOGY', 'Stay consistently hydrated', 'Sip water throughout your workout sets to regulate cellular fluid levels and muscle contraction.', Icons.water_drop_outlined, Color(0xFF2563EB)),
@@ -66,8 +66,8 @@ class SafetyGuidanceScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.border)),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.verified, color: AppColors.brandTeal, size: 22),
                         SizedBox(width: 10),
                         Expanded(
@@ -122,8 +122,8 @@ class SafetyGuidanceScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFBBF7D0))),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.bolt, color: AppColors.brandTeal, size: 20),
                         SizedBox(width: 10),
                         Expanded(

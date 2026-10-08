@@ -9,7 +9,7 @@ class ExercisePrecautionsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final principles = const [
+    const principles = [
       ('01', 'Listen to your body', 'If you feel pain, dizziness, or unusual fatigue, stop immediately.', Icons.hearing_outlined, AppColors.danger),
       ('02', 'Avoid overexertion', 'Start slow and increase intensity gradually.', Icons.speed, AppColors.warning),
       ('03', 'Stay hydrated', 'Drink water before, during and after exercise.', Icons.water_drop_outlined, AppColors.info),
@@ -48,10 +48,10 @@ class ExercisePrecautionsScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  AppCard(
-                    padding: const EdgeInsets.all(12),
+                  const AppCard(
+                    padding: EdgeInsets.all(12),
                     child: Row(
-                      children: const [
+                      children: [
                         Icon(Icons.shield_outlined, color: AppColors.brandTeal, size: 20),
                         SizedBox(width: 10),
                         Expanded(

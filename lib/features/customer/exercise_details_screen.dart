@@ -56,8 +56,8 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(widget.exercise.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      Row(
-                        children: const [
+                      const Row(
+                        children: [
                           Icon(Icons.volume_up_outlined, size: 18, color: AppColors.textSecondary),
                           SizedBox(width: 8),
                           Icon(Icons.fullscreen, size: 20, color: AppColors.textSecondary),
@@ -217,8 +217,8 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: const [
+                          const Row(
+                            children: [
                               Icon(Icons.lightbulb_outline, color: Color(0xFFD97706), size: 18),
                               SizedBox(width: 8),
                               Text('Trainer Pro Tip', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFB45309), fontSize: 13)),
@@ -272,10 +272,10 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
                   const SizedBox(height: 16),
                   const Text('PRIMARY TARGET MUSCLES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
                   const SizedBox(height: 8),
-                  Wrap(
+                  const Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children: const [
+                    children: [
                       _MuscleChip(label: 'Chest (Pectoralis Major)', color: AppColors.brandTeal),
                       _MuscleChip(label: 'Triceps Brachii', color: AppColors.info),
                       _MuscleChip(label: 'Anterior Deltoid', color: AppColors.warning),
@@ -291,10 +291,10 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
                       children: [
                         const Icon(Icons.timer_outlined, color: AppColors.brandTeal, size: 20),
                         const SizedBox(width: 10),
-                        Expanded(
+                        const Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text('Rest Period Between Sets', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               Text('Recommended 45 seconds for beginners', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                             ],

@@ -254,10 +254,10 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> with WidgetsB
                               child: const Text('Active Form Demo', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
                             ),
                           ),
-                          Positioned(
+                          const Positioned(
                             top: 12,
                             right: 12,
-                            child: const CircleAvatar(
+                            child: CircleAvatar(
                               radius: 14,
                               backgroundColor: Colors.black54,
                               child: Icon(Icons.volume_up, color: Colors.white, size: 14),

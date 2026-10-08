@@ -49,9 +49,9 @@ class ExerciseLottieWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFCCFBF1)),
       ),
-      child: Column(
+      child: const Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
+        children: [
           Icon(Icons.directions_run_outlined, size: 38, color: AppColors.brandTeal),
           SizedBox(height: 6),
           Text('60 FPS Motion Animation', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),

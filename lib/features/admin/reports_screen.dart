@@ -56,7 +56,7 @@ class ReportsScreen extends StatelessWidget {
             const Text('Select Report Type:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: type,
+              initialValue: type,
               decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
               items: const ['User Engagement', 'Trainer Accreditation', 'Physio Safety Logs', 'System Error Reports']
                   .map((t) => DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 12))))

@@ -18,7 +18,7 @@ class AdvisorSettingsScreen extends StatefulWidget {
 
 class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
   bool _consultationActive = true;
-  String _appearance = 'Light';
+  final String _appearance = 'Light';
   String _language = 'English';
 
   void _showSnack(String msg) {
@@ -73,10 +73,10 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Advisor Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('• Safety Alert Notifications: Enabled', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             SizedBox(height: 6),
             Text('• User Consultation Inquiries: Enabled', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -126,10 +126,10 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('SLMC Credentials & Board Registry', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('SLMC Reg No: SLMC-89241 ✓ Verified', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
             SizedBox(height: 6),
             Text('Specialization: Sports Medicine & Physical Therapy', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
@@ -152,10 +152,10 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Safety Content Templates', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('• Warm-up Duration: 6 mins (4 Steps)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             SizedBox(height: 4),
             Text('• Cool-down Duration: 5–7 mins (4 Steps)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -224,10 +224,10 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('About FitPulse Healthcare Advisor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('FitPulse Advisor v1.0.4', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             SizedBox(height: 4),
             Text('Clinical Licensure Terms & Board Governance', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
@@ -266,8 +266,8 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Text('Advisor Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(width: 6),
             Text('H10 // SYSTEM CONFIG', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
@@ -341,10 +341,10 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
                 children: [
                   CircleAvatar(radius: 14, backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12), child: const Icon(Icons.medical_services_outlined, color: AppColors.brandTeal, size: 16)),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text('Consultation Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                         Text('Available for user health reviews', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                       ],
@@ -358,7 +358,7 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
                   const SizedBox(width: 4),
                   Switch(
                     value: _consultationActive,
-                    activeColor: AppColors.brandTeal,
+                    activeThumbColor: AppColors.brandTeal,
                     onChanged: (v) {
                       setState(() => _consultationActive = v);
                       _showSnack(v ? 'Consultation status: Active' : 'Consultation status: Offline');
@@ -435,9 +435,9 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
                         (route) => false,
                   );
                 },
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.logout, color: AppColors.danger, size: 18),
                     SizedBox(width: 8),
                     Text('Log Out', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
