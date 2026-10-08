@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:provider/provider.dart';
@@ -19,15 +20,23 @@ import 'features/customer/onboarding_screen.dart';
 import 'features/customer/profile_setup_screen.dart';
 import 'features/customer/splash_screen.dart';
 import 'features/trainer/trainer_shell.dart';
+import 'firebase_options.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+  
+  if (!kIsWeb) {
+    try {
+      FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+    } catch (_) {}
+  }
 
   try {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   } catch (e) {
     debugPrint('Firebase init error: $e');
   }
@@ -36,9 +45,11 @@ void main() async {
     debugPrint('StorageService init error: $e');
   });
 
-  NotificationService().init().catchError((e) {
-    debugPrint('NotificationService init error: $e');
-  });
+  if (!kIsWeb) {
+    NotificationService().init().catchError((e) {
+      debugPrint('NotificationService init error: $e');
+    });
+  }
 
   runApp(const FitPulseApp());
 }
