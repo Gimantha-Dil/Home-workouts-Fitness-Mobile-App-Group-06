@@ -1,6 +1,11 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/notification_model.dart';
 import '../models/user_role.dart';
+import '../services/notification_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
   bool _notificationsEnabled = true;
@@ -11,157 +16,166 @@ class NotificationProvider extends ChangeNotifier {
   bool get soundEnabled => _soundEnabled;
   bool get streakAlertsEnabled => _streakAlertsEnabled;
 
-  final List<NotificationModel> _notifications = [
-    // Customer Notifications
-    NotificationModel(
-      id: 'n_c1',
-      title: '7-Day Workout Streak!',
-      message: 'Great job! You reached your 7-day consistency goal today.',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 10)),
-      category: 'Reminder',
-      targetRole: UserRole.customer,
-      isRead: false,
-    ),
-    NotificationModel(
-      id: 'n_c2',
-      title: 'New Routine Assigned',
-      message: 'Alex Carter added "Full Body Beginner II" to your queue.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-      category: 'Workout',
-      targetRole: UserRole.customer,
-      isRead: false,
-    ),
-    NotificationModel(
-      id: 'n_c3',
-      title: 'Clinical Safety Tip',
-      message: 'Remember to complete your 6-minute warm-up before resistance training.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 5)),
-      category: 'Safety',
-      targetRole: UserRole.customer,
-      isRead: true,
-    ),
+  List<NotificationModel> _notifications = [];
+  StreamSubscription? _notifSub;
 
-    // Trainer Notifications
-    NotificationModel(
-      id: 'n_t1',
-      title: 'Workout Approved!',
-      message: 'Your routine "Lower Body Power" was accredited by Dr. Silva.',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 25)),
-      category: 'Verification',
-      targetRole: UserRole.trainer,
-      isRead: false,
-    ),
-    NotificationModel(
-      id: 'n_t2',
-      title: 'New Trainee Check-in',
-      message: 'Nethmi Silva completed day 4 of Full Body Beginner.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-      category: 'Workout',
-      targetRole: UserRole.trainer,
-      isRead: false,
-    ),
+  NotificationProvider() {
+    _loadSettings();
+    _initAuthListener();
+  }
 
-    // Advisor Notifications
-    NotificationModel(
-      id: 'n_a1',
-      title: 'New Protocol Verification Request',
-      message: 'Review requested for "Cardio & Heart Rate Zones v2".',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 15)),
-      category: 'Verification',
-      targetRole: UserRole.advisor,
-      isRead: false,
-    ),
-    NotificationModel(
-      id: 'n_a2',
-      title: 'Clinical Guideline Update',
-      message: 'ACSM 2026 heart rate thresholds updated in system library.',
-      timestamp: DateTime.now().subtract(const Duration(hours: 6)),
-      category: 'Safety',
-      targetRole: UserRole.advisor,
-      isRead: true,
-    ),
+  void _initAuthListener() {
+    fb.FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        _listenNotifications(user.uid);
+      } else {
+        _notifSub?.cancel();
+        _notifications = [];
+        notifyListeners();
+      }
+    });
+  }
 
-    // Admin Notifications
-    NotificationModel(
-      id: 'n_adm1',
-      title: 'System Telemetry Alert',
-      message: 'Server Node-01 database response latency normal (14ms).',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
-      category: 'System',
-      targetRole: UserRole.admin,
-      isRead: false,
-    ),
-    NotificationModel(
-      id: 'n_adm2',
-      title: 'Pending Trainer Accreditation Queue',
-      message: '3 certified fitness trainers submitted liability certifications.',
-      timestamp: DateTime.now().subtract(const Duration(minutes: 40)),
-      category: 'Verification',
-      targetRole: UserRole.admin,
-      isRead: false,
-    ),
-  ];
+  void _listenNotifications(String uid) {
+    _notifSub?.cancel();
+    _notifSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .listen((snap) {
+      _notifications = snap.docs.map((d) {
+        final data = d.data();
+        final roleStr = data['targetRole'] ?? 'customer';
+        final role = UserRole.values.firstWhere(
+              (r) => r.name == roleStr,
+          orElse: () => UserRole.customer,
+        );
+
+        return NotificationModel(
+          id: d.id,
+          title: data['title'] ?? 'Notification',
+          message: data['message'] ?? '',
+          timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          category: data['category'] ?? 'General',
+          targetRole: role,
+          isRead: data['isRead'] ?? false,
+        );
+      }).toList();
+      notifyListeners();
+    }, onError: (_) {});
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
+      _soundEnabled = prefs.getBool('sound_enabled') ?? true;
+      _streakAlertsEnabled = prefs.getBool('streak_alerts_enabled') ?? true;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('notifications_enabled', _notificationsEnabled);
+      await prefs.setBool('sound_enabled', _soundEnabled);
+      await prefs.setBool('streak_alerts_enabled', _streakAlertsEnabled);
+
+      final user = fb.FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'settings': {
+            'notificationsEnabled': _notificationsEnabled,
+            'soundEnabled': _soundEnabled,
+            'streakAlertsEnabled': _streakAlertsEnabled,
+          }
+        }, SetOptions(merge: true));
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> toggleNotifications(bool val) async {
+    _notificationsEnabled = val;
+    notifyListeners();
+    await _saveSettings();
+
+    if (!val) {
+      await NotificationService().cancelAll();
+    }
+    return true;
+  }
+
+  Future<void> toggleSound(bool val) async {
+    _soundEnabled = val;
+    notifyListeners();
+    await _saveSettings();
+  }
+
+  Future<void> toggleStreakAlerts(bool val) async {
+    _streakAlertsEnabled = val;
+    notifyListeners();
+    await _saveSettings();
+  }
 
   List<NotificationModel> getNotificationsForRole(UserRole role) {
-    if (!_notificationsEnabled) return [];
-    return _notifications.where((n) => n.targetRole == role).toList();
+    return _notifications;
   }
 
-  int getUnreadCountForRole(UserRole role) {
-    if (!_notificationsEnabled) return 0;
-    return _notifications.where((n) => n.targetRole == role && !n.isRead).length;
+  int getUnreadCount(UserRole role) {
+    return _notifications.where((n) => !n.isRead).length;
   }
 
-  void toggleNotifications(bool value) {
-    _notificationsEnabled = value;
-    notifyListeners();
-  }
+  int getUnreadCountForRole(UserRole role) => getUnreadCount(role);
 
-  void toggleSound(bool value) {
-    _soundEnabled = value;
-    notifyListeners();
-  }
-
-  void toggleStreakAlerts(bool value) {
-    _streakAlertsEnabled = value;
-    notifyListeners();
-  }
-
-  void markAsRead(String id) {
-    final idx = _notifications.indexWhere((n) => n.id == id);
-    if (idx != -1) {
-      _notifications[idx].isRead = true;
+  Future<void> markAsRead(String id) async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('notifications')
+            .doc(id)
+            .update({'isRead': true});
+      } catch (_) {}
+    }
+    final index = _notifications.indexWhere((n) => n.id == id);
+    if (index != -1) {
+      _notifications[index] = _notifications[index].copyWith(isRead: true);
       notifyListeners();
     }
   }
 
-  void markAllAsReadForRole(UserRole role) {
-    for (var n in _notifications) {
-      if (n.targetRole == role) {
-        n.isRead = true;
-      }
+  Future<void> markAllAsRead(UserRole role) async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        final snap = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('notifications')
+            .get();
+
+        for (final doc in snap.docs) {
+          await doc.reference.update({'isRead': true});
+        }
+      } catch (_) {}
+    }
+
+    for (var i = 0; i < _notifications.length; i++) {
+      _notifications[i] = _notifications[i].copyWith(isRead: true);
     }
     notifyListeners();
   }
 
-  void addNotification({
-    required String title,
-    required String message,
-    required String category,
-    required UserRole targetRole,
-  }) {
-    _notifications.insert(
-      0,
-      NotificationModel(
-        id: 'n_${DateTime.now().millisecondsSinceEpoch}',
-        title: title,
-        message: message,
-        timestamp: DateTime.now(),
-        category: category,
-        targetRole: targetRole,
-        isRead: false,
-      ),
-    );
-    notifyListeners();
+  Future<void> markAllAsReadForRole(UserRole role) => markAllAsRead(role);
+
+  @override
+  void dispose() {
+    _notifSub?.cancel();
+    super.dispose();
   }
 }

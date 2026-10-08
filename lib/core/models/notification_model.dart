@@ -18,4 +18,24 @@ class NotificationModel {
     required this.targetRole,
     this.isRead = false,
   });
+
+  NotificationModel copyWith({
+    String? id,
+    String? title,
+    String? message,
+    DateTime? timestamp,
+    String? category,
+    UserRole? targetRole,
+    bool? isRead,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      timestamp: timestamp ?? this.timestamp,
+      category: category ?? this.category,
+      targetRole: targetRole ?? this.targetRole,
+      isRead: isRead ?? this.isRead,
+    );
+  }
 }
