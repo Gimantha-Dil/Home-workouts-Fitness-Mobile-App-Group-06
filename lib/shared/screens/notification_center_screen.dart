@@ -187,80 +187,80 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
               Expanded(
                 child: list.isEmpty
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.mark_email_read_outlined, size: 48, color: AppColors.textSecondary),
-                            SizedBox(height: 10),
-                            Text('No Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            Text('You\'re all caught up with your alerts!', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                          ],
-                        ),
-                      )
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.mark_email_read_outlined, size: 48, color: AppColors.textSecondary),
+                      SizedBox(height: 10),
+                      Text('No Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text('You\'re all caught up with your alerts!', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                )
                     : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                        itemCount: list.length,
-                        itemBuilder: (ctx, i) {
-                          final item = list[i];
-                          final color = _categoryColor(item.category);
-                          final icon = _categoryIcon(item.category);
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  itemCount: list.length,
+                  itemBuilder: (ctx, i) {
+                    final item = list[i];
+                    final color = _categoryColor(item.category);
+                    final icon = _categoryIcon(item.category);
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: InkWell(
-                              onTap: () => notifProvider.markAsRead(item.id),
-                              borderRadius: BorderRadius.circular(14),
-                              child: AppCard(
-                                padding: const EdgeInsets.all(12),
-                                child: Row(
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: InkWell(
+                        onTap: () => notifProvider.markAsRead(item.id),
+                        borderRadius: BorderRadius.circular(14),
+                        child: AppCard(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Stack(
+                                alignment: Alignment.topRight,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: color.withValues(alpha: 0.12),
+                                    child: Icon(icon, color: color, size: 20),
+                                  ),
+                                  if (!item.isRead)
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.danger,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Stack(
-                                      alignment: Alignment.topRight,
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        CircleAvatar(
-                                          radius: 18,
-                                          backgroundColor: color.withOpacity(0.12),
-                                          child: Icon(icon, color: color, size: 20),
-                                        ),
-                                        if (!item.isRead)
-                                          Container(
-                                            width: 10,
-                                            height: 10,
-                                            decoration: const BoxDecoration(
-                                              color: AppColors.danger,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
+                                        Text(item.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: item.isRead ? AppColors.textSecondary : AppColors.textPrimary)),
+                                        Text(_timeAgo(item.timestamp), style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                       ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(item.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: item.isRead ? AppColors.textSecondary : AppColors.textPrimary)),
-                                              Text(_timeAgo(item.timestamp), style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            item.message,
-                                            style: TextStyle(fontSize: 11, color: item.isRead ? AppColors.textSecondary : AppColors.textPrimary, height: 1.3),
-                                          ),
-                                        ],
-                                      ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.message,
+                                      style: TextStyle(fontSize: 11, color: item.isRead ? AppColors.textSecondary : AppColors.textPrimary, height: 1.3),
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                          );
-                        },
+                            ],
+                          ),
+                        ),
                       ),
+                    );
+                  },
+                ),
               ),
             ] else ...[
               Expanded(
