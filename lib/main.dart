@@ -1,22 +1,43 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/models/user_role.dart';
 import 'core/providers/auth_provider.dart';
+import 'core/providers/history_provider.dart';
 import 'core/providers/language_provider.dart';
 import 'core/providers/notification_provider.dart';
-import 'core/services/supabase_service.dart';
+import 'core/providers/workout_provider.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/storage_service.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/login_screen.dart';
-import 'features/customer/splash_screen.dart';
-import 'features/customer/onboarding_screen.dart';
-import 'features/customer/customer_shell.dart';
-import 'features/trainer/trainer_shell.dart';
-import 'features/advisor/advisor_shell.dart';
 import 'features/admin/admin_shell.dart';
+import 'features/advisor/advisor_shell.dart';
+import 'features/auth/login_screen.dart';
+import 'features/customer/customer_shell.dart';
+import 'features/customer/onboarding_screen.dart';
+import 'features/customer/profile_setup_screen.dart';
+import 'features/customer/splash_screen.dart';
+import 'features/trainer/trainer_shell.dart';
+
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SupabaseService.initializeSupabase();
+
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    debugPrint('Firebase init error: $e');
+  }
+
+  StorageService.initializeStorage().catchError((e) {
+    debugPrint('StorageService init error: $e');
+  });
+
+  NotificationService().init().catchError((e) {
+    debugPrint('NotificationService init error: $e');
+  });
+
   runApp(const FitPulseApp());
 }
 
@@ -30,13 +51,14 @@ class FitPulseApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => WorkoutProvider()),
+        ChangeNotifierProvider(create: (_) => HistoryProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           final role = auth.currentUser?.role ?? UserRole.customer;
-          final userKey = auth.currentUser?.id ?? 'logged_out';
           return MaterialApp(
-            key: ValueKey(userKey),
+            navigatorKey: rootNavigatorKey,
             title: 'FitPulse',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.themeForRole(role),
@@ -49,22 +71,52 @@ class FitPulseApp extends StatelessWidget {
 }
 
 /// Decides which screen to show based on auth + onboarding state.
-/// - Not logged in -> SplashScreen -> OnboardingScreen -> LoginScreen
-/// - Logged in as Customer -> CustomerShell
-/// - Logged in as Trainer/Advisor/Admin -> their respective shell
-class AppRoot extends StatelessWidget {
+class AppRoot extends StatefulWidget {
   const AppRoot({super.key});
+
+  @override
+  State<AppRoot> createState() => _AppRootState();
+}
+
+class _AppRootState extends State<AppRoot> {
+  String? _lastUserId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final auth = context.watch<AuthProvider>();
+    final currentId = auth.currentUser?.id;
+    if (_lastUserId != null && _lastUserId != currentId) {
+      rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+    }
+    _lastUserId = currentId;
+  }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
+    // 1. Loading state
+    if (auth.isLoading) {
+      return const SplashScreen();
+    }
+
+    // 2. Logged Out state
     if (!auth.isLoggedIn) {
       return const UnauthFlow();
     }
 
-    switch (auth.currentUser!.role) {
+    // 3. User null safety check
+    final user = auth.currentUser;
+    if (user == null) {
+      return const UnauthFlow();
+    }
+
+    switch (user.role) {
       case UserRole.customer:
+        if (!user.isProfileCompleted) {
+          return const ProfileSetupScreen();
+        }
         return const CustomerShell();
       case UserRole.trainer:
         return const TrainerShell();
@@ -79,40 +131,45 @@ class AppRoot extends StatelessWidget {
 class UnauthFlow extends StatefulWidget {
   const UnauthFlow({super.key});
 
-  static bool splashAlreadyShown = false;
-
   @override
   State<UnauthFlow> createState() => _UnauthFlowState();
 }
 
 class _UnauthFlowState extends State<UnauthFlow> {
-  late bool _showSplash;
-  bool _onboardingCompleted = false;
+  bool _showSplash = true;
 
   @override
   void initState() {
     super.initState();
-    _showSplash = !UnauthFlow.splashAlreadyShown;
-    if (_showSplash) {
-      UnauthFlow.splashAlreadyShown = true;
-      Future.delayed(const Duration(seconds: 6), () {
-        if (mounted) {
-          setState(() => _showSplash = false);
-        }
-      });
-    }
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      if (mounted) {
+        setState(() => _showSplash = false);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
     if (_showSplash) {
       return const SplashScreen();
     }
-    if (!_onboardingCompleted) {
-      return OnboardingScreen(
-        onDone: () => setState(() => _onboardingCompleted = true),
+
+    if (!auth.onboardingSeen) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: OnboardingScreen(
+          onDone: () async {
+            await auth.completeOnboarding();
+          },
+        ),
       );
     }
-    return const LoginScreen(role: UserRole.customer);
+
+    return const Scaffold(
+      backgroundColor: Colors.white,
+      body: LoginScreen(role: UserRole.customer),
+    );
   }
 }

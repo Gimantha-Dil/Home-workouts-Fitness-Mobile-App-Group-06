@@ -25,6 +25,8 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasVideo = widget.exercise.videoUrl != null && widget.exercise.videoUrl!.isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -73,11 +75,32 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Real MP4 Exercise Video Streaming Player
-                  ExerciseVideoPlayer(
-                    videoUrl: 'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
-                    title: widget.exercise.name,
-                  ),
+                  // Real MP4 Exercise Video Streaming Player or Placeholder
+                  if (hasVideo)
+                    ExerciseVideoPlayer(
+                      videoUrl: widget.exercise.videoUrl!,
+                      title: widget.exercise.name,
+                    )
+                  else
+                    Container(
+                      height: 180,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.videocam_off_outlined, color: AppColors.textSecondary, size: 40),
+                          const SizedBox(height: 8),
+                          Text(widget.exercise.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
+                          const SizedBox(height: 2),
+                          const Text('No video available yet', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 12),
 
                   // Lottie 60 FPS Exercise Motion Animation
@@ -258,7 +281,7 @@ class _MuscleChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
       child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
     );
   }
