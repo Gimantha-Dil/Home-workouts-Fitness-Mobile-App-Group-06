@@ -145,35 +145,96 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Steps List
-                  ..._steps.asMap().entries.map((entry) {
-                    final i = entry.key + 1;
-                    final (title, desc) = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
+                  // Instructions Tab or Trainer Tips Tab
+                  if (_tab == 0) ...[
+                    if (widget.exercise.instructions.isNotEmpty)
+                      ...widget.exercise.instructions.asMap().entries.map((entry) {
+                        final i = entry.key + 1;
+                        final text = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: AppColors.brandTeal,
+                                child: Text('$i', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Step $i', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    const SizedBox(height: 2),
+                                    Text(text, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      })
+                    else
+                      ..._steps.asMap().entries.map((entry) {
+                        final i = entry.key + 1;
+                        final (title, desc) = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: AppColors.brandTeal,
+                                child: Text('$i', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    const SizedBox(height: 2),
+                                    Text(desc, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                  ] else ...[
+                    // Trainer Tips tab
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFFEDD5)),
+                      ),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            radius: 12,
-                            backgroundColor: AppColors.brandTeal,
-                            child: Text('$i', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                          Row(
+                            children: const [
+                              Icon(Icons.lightbulb_outline, color: Color(0xFFD97706), size: 18),
+                              SizedBox(width: 8),
+                              Text('Trainer Pro Tip', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFB45309), fontSize: 13)),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                const SizedBox(height: 2),
-                                Text(desc, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3)),
-                              ],
-                            ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.exercise.tip.isNotEmpty
+                                ? widget.exercise.tip
+                                : 'Keep your back straight, ribcage tucked, and engage your core throughout the movement to prevent lower back strain.',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF78350F), height: 1.4),
                           ),
                         ],
                       ),
-                    );
-                  }),
+                    ),
+                  ],
                   const SizedBox(height: 16),
 
                   // Physio Safety Advisory Card
