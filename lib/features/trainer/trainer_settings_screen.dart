@@ -1,8 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../main.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'trainer_shell.dart';
 
 class TrainerSettingsScreen extends StatefulWidget {
   const TrainerSettingsScreen({super.key});
@@ -19,6 +24,47 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  void _showEditProfileDialog(BuildContext context) {
+    final user = context.read<AuthProvider>().currentUser;
+    final controller = TextEditingController(text: user?.name ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Profile Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Full Name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+            onPressed: () async {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty && user != null) {
+                try {
+                  await FirebaseFirestore.instance.collection('users').doc(user.id).update({
+                    'name': newName,
+                  });
+                  final fbUser = fb.FirebaseAuth.instance.currentUser;
+                  if (fbUser != null) {
+                    await fbUser.updateDisplayName(newName);
+                    if (context.mounted) {
+                      await context.read<AuthProvider>().refreshUserFromFirestore(fbUser);
+                    }
+                  }
+                } catch (_) {}
+              }
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -47,30 +93,7 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
     );
   }
 
-  void _openAppearanceDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Builder Appearance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['Light', 'Dark', 'Builder Wireframe'].map((a) {
-            return RadioListTile<String>(
-              title: Text(a, style: const TextStyle(fontSize: 13)),
-              value: a,
-              groupValue: _appearance,
-              activeColor: AppColors.brandTeal,
-              onChanged: (v) {
-                setState(() => _appearance = v!);
-                Navigator.of(ctx).pop();
-                _showSnack('Appearance changed to $_appearance');
-              },
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
+
 
   void _openLanguageDialog() {
     showDialog(
@@ -241,6 +264,10 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const TrainerShell()),
+              );
             }
           },
         ),
@@ -264,9 +291,15 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 20,
-                    backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop'),
+                    child: ClipOval(
+                      child: AppNetworkImage(
+                        url: user?.profilePhotoUrl,
+                        width: 40,
+                        height: 40,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -275,7 +308,7 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
                       children: [
                         Row(
                           children: [
-                            Text(user?.name ?? 'Alex Carter', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text(user?.name ?? 'Fitness Trainer', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(width: 4),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
@@ -284,12 +317,15 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
                             ),
                           ],
                         ),
-                        Text(user?.email ?? 'alex.carter@fitpulse.trainer', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                        Text(user?.email ?? 'trainer@example.com', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                         const Text('Strength & Conditioning Coach', style: TextStyle(fontSize: 9, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
-                  IconButton(icon: const Icon(Icons.edit_outlined, size: 16), onPressed: () {}),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    onPressed: () => _showEditProfileDialog(context),
+                  ),
                 ],
               ),
             ),
@@ -308,7 +344,7 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  CircleAvatar(radius: 14, backgroundColor: AppColors.brandTeal.withOpacity(0.12), child: const Icon(Icons.fitness_center, color: AppColors.brandTeal, size: 16)),
+                  CircleAvatar(radius: 14, backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12), child: const Icon(Icons.fitness_center, color: AppColors.brandTeal, size: 16)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -337,15 +373,7 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            _settingTile(
-              Icons.color_lens_outlined,
-              'Appearance',
-              'Theme & visual workout builder view',
-              AppColors.purple,
-              badge: _appearance,
-              onTap: _openAppearanceDialog,
-            ),
-            const SizedBox(height: 8),
+
             _settingTile(
               Icons.language_outlined,
               'Language',
@@ -403,7 +431,15 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFCA5A5))),
               child: InkWell(
-                onTap: () => context.read<AuthProvider>().logout(),
+                onTap: () async {
+                  final navigator = Navigator.of(context);
+                  final auth = context.read<AuthProvider>();
+                  await auth.logout();
+                  navigator.pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AppRoot()),
+                        (route) => false,
+                  );
+                },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
@@ -426,7 +462,7 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
       onTap: onTap,
       child: Row(
         children: [
-          CircleAvatar(radius: 14, backgroundColor: color.withOpacity(0.12), child: Icon(icon, color: color, size: 16)),
+          CircleAvatar(radius: 14, backgroundColor: color.withValues(alpha: 0.12), child: Icon(icon, color: color, size: 16)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -440,7 +476,7 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
           if (badge != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
               child: Text(badge, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
             ),
             const SizedBox(width: 6),
