@@ -22,6 +22,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -127,6 +133,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  Widget _buildImageWidget(String path) {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFF3F4F6),
+      child: Image.asset(
+        path,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Center(
+          child: Icon(Icons.fitness_center, size: 48, color: AppColors.brandTeal),
+        ),
+      ),
+    );
+  }
+
   // Onboarding Page 1
   Widget _buildPage1(BuildContext context) {
     return Padding(
@@ -138,15 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/onborad.jpeg'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
+              child: _buildImageWidget('assets/images/onborad.jpeg'),
             ),
           ),
           const SizedBox(height: 20),
@@ -178,15 +192,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/ON2.jpeg'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
+              child: _buildImageWidget('assets/images/ON2.jpeg'),
             ),
           ),
           const SizedBox(height: 20),
@@ -202,8 +208,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: const [
+          const Row(
+            children: [
               Expanded(child: _FeatureBadge(icon: Icons.timer_outlined, title: '15-30 Min', sub: 'Quick & Daily')),
               SizedBox(width: 8),
               Expanded(child: _FeatureBadge(icon: Icons.verified_user_outlined, title: 'Coach Verified', sub: '100% Safe')),
@@ -228,15 +234,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/On3.jpeg'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
+              child: _buildImageWidget('assets/images/On3.jpeg'),
             ),
           ),
           const SizedBox(height: 20),
@@ -252,8 +250,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: const [
+          const Row(
+            children: [
               Expanded(child: _FeatureBadge(icon: Icons.local_fire_department_outlined, title: 'Calorie Logs', sub: 'Burn metrics')),
               SizedBox(width: 8),
               Expanded(child: _FeatureBadge(icon: Icons.notifications_outlined, title: 'Reminders', sub: 'Custom alerts')),

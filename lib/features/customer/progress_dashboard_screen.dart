@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'goals_achievements_screen.dart';
 
 class ProgressDashboardScreen extends StatefulWidget {
   const ProgressDashboardScreen({super.key});
@@ -13,20 +14,68 @@ class ProgressDashboardScreen extends StatefulWidget {
 class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
   int _tab = 0;
 
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Progress Range Filter', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                ListTile(
+                  title: const Text('Weekly View (7 Days)'),
+                  trailing: _tab == 0 ? const Icon(Icons.check, color: AppColors.brandTeal) : null,
+                  onTap: () {
+                    setState(() => _tab = 0);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+                ListTile(
+                  title: const Text('Monthly View (30 Days)'),
+                  trailing: _tab == 1 ? const Icon(Icons.check, color: AppColors.brandTeal) : null,
+                  onTap: () {
+                    setState(() => _tab = 1);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+                ListTile(
+                  title: const Text('Quarterly View (3 Months)'),
+                  trailing: _tab == 2 ? const Icon(Icons.check, color: AppColors.brandTeal) : null,
+                  onTap: () {
+                    setState(() => _tab = 2);
+                    Navigator.of(ctx).pop();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Column(
+        title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('KINETIC PULSE LIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal, letterSpacing: 0.5)),
             Text('Your Progress', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.tune), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.tune), onPressed: _showFilterBottomSheet),
         ],
       ),
       body: SafeArea(
@@ -54,16 +103,18 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('WORKOUT COMPLETION', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
-                          SizedBox(height: 2),
-                          Text('Weekly Goal: 5 of 6 Days', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                        children: [
+                          const Text('WORKOUT COMPLETION', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                          const SizedBox(height: 2),
+                          Text(_tab == 0 ? 'Weekly Goal: 5 of 6 Days' : _tab == 1 ? 'Monthly Goal: 22 of 25 Days' : '3-Month Goal: 65 of 75 Days',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                         ],
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(12)),
-                        child: const Text('84% Complete', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                        child: Text(_tab == 0 ? '84% Complete' : _tab == 1 ? '88% Complete' : '87% Complete',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                       ),
                     ],
                   ),
@@ -82,7 +133,11 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                             sideTitles: SideTitles(
                               showTitles: true,
                               getTitlesWidget: (value, meta) {
-                                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                                final days = _tab == 0
+                                    ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                                    : _tab == 1
+                                        ? ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7']
+                                        : ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7'];
                                 final idx = value.toInt();
                                 if (idx >= 0 && idx < days.length) {
                                   return Padding(
@@ -95,15 +150,25 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                             ),
                           ),
                         ),
-                        barGroups: [
-                          _barGroup(0, 70, true),
-                          _barGroup(1, 100, true),
-                          _barGroup(2, 60, true),
-                          _barGroup(3, 85, true),
-                          _barGroup(4, 90, true),
-                          _barGroup(5, 40, false),
-                          _barGroup(6, 10, false),
-                        ],
+                        barGroups: _tab == 0
+                            ? [
+                                _barGroup(0, 70, true),
+                                _barGroup(1, 100, true),
+                                _barGroup(2, 60, true),
+                                _barGroup(3, 85, true),
+                                _barGroup(4, 90, true),
+                                _barGroup(5, 40, false),
+                                _barGroup(6, 10, false),
+                              ]
+                            : [
+                                _barGroup(0, 80, true),
+                                _barGroup(1, 95, true),
+                                _barGroup(2, 85, true),
+                                _barGroup(3, 90, true),
+                                _barGroup(4, 75, true),
+                                _barGroup(5, 60, true),
+                                _barGroup(6, 85, true),
+                              ],
                       ),
                     ),
                   ),
@@ -149,7 +214,9 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const GoalsAchievementsScreen()),
+                    ),
                     child: const Text('View', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 11)),
                   ),
                 ],

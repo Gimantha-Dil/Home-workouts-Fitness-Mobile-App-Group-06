@@ -1,10 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/mock_data.dart';
 import '../../core/providers/auth_provider.dart';
-import '../../core/services/supabase_service.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../main.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'profile_setup_screen.dart';
 import 'settings_screen.dart';
@@ -19,34 +23,82 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _healthSyncActive = true;
+  bool _uploadingPhoto = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isAndroid) {
+      _checkLostData();
+    }
+  }
+
+  Future<void> _checkLostData() async {
+    try {
+      final picker = ImagePicker();
+      final response = await picker.retrieveLostData();
+      if (response.isEmpty || response.file == null) return;
+      final file = response.file!;
+      final user = context.read<AuthProvider>().currentUser;
+      if (user != null) {
+        final bytes = await file.readAsBytes();
+        final publicUrl = await StorageService.uploadProfilePhoto(
+          bytes: bytes,
+          uid: user.id,
+          format: file.name.contains('.') ? file.name.split('.').last : 'jpg',
+        );
+        if (mounted) {
+          await context.read<AuthProvider>().updateProfilePhoto(publicUrl);
+          _showSnack('Profile picture updated successfully!');
+        }
+      }
+    } catch (_) {}
+  }
 
   void _showSnack(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
     );
   }
 
   Future<void> _pickAndUploadAvatar() async {
+    final user = context.read<AuthProvider>().currentUser;
+    if (user == null) {
+      _showSnack('No active user profile.');
+      return;
+    }
+
     try {
       final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1080,
+        imageQuality: 80,
+      );
       if (pickedFile != null) {
-        _showSnack('Uploading profile picture to Supabase Storage...');
+        setState(() => _uploadingPhoto = true);
         final bytes = await pickedFile.readAsBytes();
-        final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-        final publicUrl = await SupabaseService.uploadUserPhoto(
-          fileName: fileName,
-          photoBytes: bytes,
+        final publicUrl = await StorageService.uploadProfilePhoto(
+          bytes: bytes,
+          uid: user.id,
+          format: pickedFile.name.contains('.') ? pickedFile.name.split('.').last : 'jpg',
         );
 
         if (mounted) {
-          context.read<AuthProvider>().updateProfilePhoto(publicUrl);
-          _showSnack('Profile picture updated successfully via Supabase!');
+          await context.read<AuthProvider>().updateProfilePhoto(publicUrl);
+          _showSnack('Profile picture updated successfully!');
         }
       }
+    } on PlatformException catch (e) {
+      _showSnack('Permission denied or photo access unavailable: ${e.message}');
     } catch (e) {
-      _showSnack('Error uploading photo: $e');
+      _showSnack('Upload failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingPhoto = false);
+      }
     }
   }
 
@@ -282,15 +334,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   GestureDetector(
-                    onTap: _pickAndUploadAvatar,
+                    onTap: _uploadingPhoto ? null : _pickAndUploadAvatar,
                     child: Stack(
                       alignment: Alignment.bottomRight,
                       children: [
                         CircleAvatar(
                           radius: 40,
-                          backgroundImage: user?.profilePhotoUrl != null && user!.profilePhotoUrl!.isNotEmpty
-                              ? NetworkImage(user.profilePhotoUrl!)
-                              : const NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop') as ImageProvider,
+                          backgroundColor: Colors.grey.shade200,
+                          child: ClipOval(
+                            child: AppNetworkImage(
+                              url: user?.profilePhotoUrl,
+                              width: 80,
+                              height: 80,
+                            ),
+                          ),
                         ),
                         Container(
                           padding: const EdgeInsets.all(4),
@@ -304,12 +361,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(user?.name ?? 'Nethmi Silva', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(user?.name ?? 'FitPulse User', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(width: 4),
                       const Icon(Icons.check_circle, color: AppColors.brandTeal, size: 16),
                     ],
                   ),
-                  Text(user?.email ?? 'nethmi@example.com', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  Text(user?.email ?? 'user@example.com', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -423,7 +480,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             Center(
               child: TextButton(
-                onPressed: () => context.read<AuthProvider>().logout(),
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  final auth = context.read<AuthProvider>();
+                  await auth.logout();
+                  navigator.pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AppRoot()),
+                    (route) => false,
+                  );
+                },
                 child: const Text('Sign Out of FitPulse', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
               ),
             ),
@@ -442,7 +507,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: onTap,
       child: Row(
         children: [
-          CircleAvatar(radius: 14, backgroundColor: color.withOpacity(0.12), child: Icon(icon, color: color, size: 16)),
+          CircleAvatar(radius: 14, backgroundColor: color.withValues(alpha: 0.12), child: Icon(icon, color: color, size: 16)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
