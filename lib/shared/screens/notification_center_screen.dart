@@ -158,7 +158,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                   ),
                   Switch(
                     value: notifProvider.notificationsEnabled,
-                    activeColor: AppColors.brandTeal,
+                    activeThumbColor: AppColors.brandTeal,
                     onChanged: (v) => notifProvider.toggleNotifications(v),
                   ),
                 ],
@@ -186,10 +186,10 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
               // Notification List
               Expanded(
                 child: list.isEmpty
-                    ? Center(
+                    ? const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Icon(Icons.mark_email_read_outlined, size: 48, color: AppColors.textSecondary),
                       SizedBox(height: 10),
                       Text('No Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -263,11 +263,11 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                 ),
               ),
             ] else ...[
-              Expanded(
+              const Expanded(
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children: [
                       Icon(Icons.notifications_off_outlined, size: 52, color: AppColors.textSecondary),
                       SizedBox(height: 12),
                       Text('Notifications Are Turn Off', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),

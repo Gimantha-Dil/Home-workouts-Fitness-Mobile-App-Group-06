@@ -214,8 +214,8 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 22),
             SizedBox(width: 6),
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
@@ -232,9 +232,9 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Workout Content', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       _Badge(text: 'Admin Panel', color: AppColors.brandTeal),
                     ],

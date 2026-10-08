@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
-import '../../main.dart';
 import '../../shared/screens/notification_center_screen.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'advisor_management_screen.dart';
@@ -19,7 +18,7 @@ class AdminSettingsScreen extends StatefulWidget {
 
 class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
   bool _maintenanceMode = false;
-  String _appearance = 'Light Mode';
+  final String _appearance = 'Light Mode';
   String _locale = 'English (US)';
 
   void _showSnack(String msg) {
@@ -60,10 +59,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('User Roles & RBAC Governance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('• Superadmin: Full root access, backup & system config', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
             SizedBox(height: 6),
             Text('• Trainer: Workout publishing, client analytics', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
@@ -88,10 +87,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('API Keys & Webhook Telemetry', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('Stripe Gateway: sk_live_••••••••9421 [Active]', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.success)),
             SizedBox(height: 6),
             Text('Firebase Cloud Messaging: Active • 14ms Latency', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
@@ -114,10 +113,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('About FitPulse Admin Portal', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             Text('FitPulse Admin v1.0.0-PROD (Build 342)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             SizedBox(height: 4),
             Text('Kinetic Pulse Engine 4.1 Architecture', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
@@ -153,8 +152,8 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Text('Admin Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(width: 6),
             Text('A11 • ROOT CONFIG', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
@@ -230,10 +229,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 children: [
                   CircleAvatar(radius: 14, backgroundColor: AppColors.warning.withValues(alpha: 0.12), child: const Icon(Icons.build_circle_outlined, color: AppColors.warning, size: 16)),
                   const SizedBox(width: 12),
-                  Expanded(
+                  const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text('Maintenance Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                         Text('Pause trainee signups & background jobs', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                       ],
@@ -243,7 +242,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                   const SizedBox(width: 4),
                   Switch(
                     value: _maintenanceMode,
-                    activeColor: AppColors.brandTeal,
+                    activeThumbColor: AppColors.brandTeal,
                     onChanged: (v) {
                       setState(() => _maintenanceMode = v);
                       _showSnack(v ? 'Maintenance Mode Activated' : 'Maintenance Mode Deactivated');
@@ -326,9 +325,9 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   }
                 },
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.power_settings_new, color: AppColors.danger, size: 18),
                     SizedBox(width: 8),
                     Text('Terminate Admin Session', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),

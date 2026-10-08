@@ -50,7 +50,7 @@ class TrainerProfileScreen extends StatelessWidget {
                   Stack(
                     alignment: Alignment.bottomRight,
                     children: [
-                      CircleAvatar(
+                      const CircleAvatar(
                         radius: 40,
                         child: ClipOval(
                           child: AppNetworkImage(
@@ -70,11 +70,11 @@ class TrainerProfileScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(user?.name ?? 'Fitness Trainer', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Wrap(
+                  const Wrap(
                     spacing: 6,
                     runSpacing: 4,
                     alignment: WrapAlignment.center,
-                    children: const [
+                    children: [
                       _Chip(label: 'Bodyweight', color: AppColors.brandTeal),
                       _Chip(label: 'Mobility', color: AppColors.info),
                       _Chip(label: 'Hypertrophy', color: AppColors.purple),
@@ -106,8 +106,8 @@ class TrainerProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             // Stats Row
-            Row(
-              children: const [
+            const Row(
+              children: [
                 Expanded(child: _TrainerStat(value: '14', label: 'Created', icon: Icons.fullscreen, color: AppColors.info)),
                 SizedBox(width: 8),
                 Expanded(child: _TrainerStat(value: '11', label: 'Active', icon: Icons.check_circle_outline, color: AppColors.success)),
@@ -117,11 +117,11 @@ class TrainerProfileScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             // About Coach Alex Card
-            AppCard(
-              padding: const EdgeInsets.all(14),
+            const AppCard(
+              padding: EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text('About Coach Alex', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   SizedBox(height: 6),
                   Text(
@@ -132,9 +132,9 @@ class TrainerProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 Text('Certifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 Text('2 Active', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
               ],
@@ -144,9 +144,9 @@ class TrainerProfileScreen extends StatelessWidget {
             const SizedBox(height: 8),
             _certTile('NASM Corrective Exercise Special', 'National Academy of Sports Medicine'),
             const SizedBox(height: 16),
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 Text('Assigned Modules', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                 Text('3 Total', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
               ],

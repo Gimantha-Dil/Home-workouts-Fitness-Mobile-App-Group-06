@@ -59,6 +59,7 @@ class Workout {
   final String goal;
   final String status;
   final String imageUrl;
+  final String? videoUrl;
   final List<Exercise> exercises;
 
   bool get hasExercises => exercises.isNotEmpty;
@@ -74,6 +75,7 @@ class Workout {
     this.goal = 'General Fitness',
     this.status = 'Draft',
     this.imageUrl = 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
+    this.videoUrl,
     this.exercises = const [],
   });
 
@@ -87,6 +89,7 @@ class Workout {
       'goal': goal,
       'status': status,
       'imageUrl': imageUrl,
+      'videoUrl': videoUrl,
       'exercises': exercises.map((e) => e.toMap()).toList(),
     };
   }
@@ -111,6 +114,7 @@ class Workout {
       goal: map['goal'] ?? 'General Fitness',
       status: map['status'] ?? 'Draft',
       imageUrl: map['imageUrl'] ?? 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
+      videoUrl: map['videoUrl'],
       exercises: list,
     );
   }
@@ -121,27 +125,41 @@ class SafetyGuide {
   final String title;
   final String category;
   final String content;
+  final String author;
   final String status;
+  final DateTime? date;
 
   const SafetyGuide({
     required this.id,
     required this.title,
     required this.category,
-    this.content = '',
+    required this.content,
+    this.author = 'Healthcare Advisor',
     this.status = 'Published',
+    this.date,
   });
-}
 
-class AppNotification {
-  final String id;
-  final String title;
-  final String time;
-  final bool enabled;
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'category': category,
+      'content': content,
+      'author': author,
+      'status': status,
+      'date': date?.toIso8601String(),
+    };
+  }
 
-  const AppNotification({
-    required this.id,
-    required this.title,
-    required this.time,
-    this.enabled = true,
-  });
+  factory SafetyGuide.fromMap(Map<String, dynamic> map) {
+    return SafetyGuide(
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      category: map['category'] ?? 'General',
+      content: map['content'] ?? '',
+      author: map['author'] ?? 'Healthcare Advisor',
+      status: map['status'] ?? 'Published',
+      date: map['date'] != null ? DateTime.tryParse(map['date'].toString()) : null,
+    );
+  }
 }

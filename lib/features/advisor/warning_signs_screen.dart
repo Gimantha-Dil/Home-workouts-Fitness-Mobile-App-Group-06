@@ -7,7 +7,7 @@ class WarningSignsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final warnings = const [
+    const warnings = [
       ('Chest pain or tightness', 'Pressure, squeezing, or radiating pain', Icons.favorite_border),
       ('Shortness of breath', 'Disproportionate or laboured respiration', Icons.air),
       ('Dizziness or fainting', 'Lightheadedness, confusion, or vertigo', Icons.rotate_right),
@@ -49,8 +49,8 @@ class WarningSignsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFFCA5A5)),
                     ),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         CircleAvatar(radius: 16, backgroundColor: AppColors.danger, child: Icon(Icons.warning, color: Colors.white, size: 18)),
                         SizedBox(width: 10),
                         Expanded(
@@ -98,8 +98,8 @@ class WarningSignsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFBBF7D0))),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.info_outline, color: AppColors.brandTeal, size: 18),
                         SizedBox(width: 10),
                         Expanded(

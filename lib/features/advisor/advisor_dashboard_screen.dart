@@ -104,9 +104,9 @@ class AdvisorDashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+                  children: [
                     Text('QUICK ACTIONS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
                     Text('Shortcuts', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                   ],
@@ -147,9 +147,9 @@ class AdvisorDashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+                  children: [
                     Text('RECENT SAFETY GUIDES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
                     Text('Realtime DB', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                   ],

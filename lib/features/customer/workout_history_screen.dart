@@ -166,7 +166,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 2),
-                                    Text('Session Logged', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                    const Text('Session Logged', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                     const SizedBox(height: 4),
                                     Row(
                                       children: [

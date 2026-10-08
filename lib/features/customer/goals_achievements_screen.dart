@@ -43,8 +43,8 @@ class GoalsAchievementsScreen extends StatelessWidget {
                 gradient: const LinearGradient(colors: [Color(0xFF0D9488), Color(0xFF0F3D3A)]),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   CircleAvatar(radius: 16, backgroundColor: Colors.white24, child: Icon(Icons.trending_up, color: Colors.white, size: 20)),
                   SizedBox(width: 10),
                   Expanded(
@@ -62,9 +62,9 @@ class GoalsAchievementsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             // Active Focus
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 Text('Active Focus', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 Text('Edit Target ⚙', style: TextStyle(fontSize: 11, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
               ],
@@ -78,13 +78,13 @@ class GoalsAchievementsScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const CircleAvatar(radius: 14, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.scale, color: AppColors.brandTeal, size: 16)),
-                          const SizedBox(width: 8),
+                          CircleAvatar(radius: 14, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.scale, color: AppColors.brandTeal, size: 16)),
+                          SizedBox(width: 8),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text('Weight Loss', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                               Text('Targeting healthy metabolic rate', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                             ],
@@ -99,9 +99,9 @@ class GoalsAchievementsScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Progress to Target', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                       Text('60% Complete', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                     ],
@@ -117,9 +117,9 @@ class GoalsAchievementsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('TARGET DATE: Oct 28 (3 wks left)', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                       Text('WEEKLY PACE: -0.65 kg / week', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                     ],
@@ -129,9 +129,9 @@ class GoalsAchievementsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             // Achievements Section
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 Text('Achievements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                 Text('3 Unlocked • View All', style: TextStyle(fontSize: 11, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
               ],
@@ -154,10 +154,10 @@ class GoalsAchievementsScreen extends StatelessWidget {
             const SizedBox(height: 20),
             const Text('Upcoming Milestones', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             const SizedBox(height: 10),
-            AppCard(
-              padding: const EdgeInsets.all(12),
+            const AppCard(
+              padding: EdgeInsets.all(12),
               child: Row(
-                children: const [
+                children: [
                   CircleAvatar(radius: 14, backgroundColor: Color(0xFFE0F2FE), child: Icon(Icons.fitness_center, color: AppColors.info, size: 16)),
                   SizedBox(width: 10),
                   Expanded(
@@ -174,10 +174,10 @@ class GoalsAchievementsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            AppCard(
-              padding: const EdgeInsets.all(12),
+            const AppCard(
+              padding: EdgeInsets.all(12),
               child: Row(
-                children: const [
+                children: [
                   CircleAvatar(radius: 14, backgroundColor: Color(0xFFF3F4F6), child: Icon(Icons.directions_run, color: AppColors.textSecondary, size: 16)),
                   SizedBox(width: 10),
                   Expanded(

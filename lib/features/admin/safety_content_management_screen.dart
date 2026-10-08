@@ -193,8 +193,8 @@ class _SafetyContentManagementScreenState extends State<SafetyContentManagementS
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 22),
             SizedBox(width: 6),
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
@@ -213,9 +213,9 @@ class _SafetyContentManagementScreenState extends State<SafetyContentManagementS
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Safety Content\nManagement', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textPrimary, height: 1.2)),
                       _Badge(text: '• 8 Live', color: AppColors.success),
                     ],
@@ -232,8 +232,8 @@ class _SafetyContentManagementScreenState extends State<SafetyContentManagementS
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: const Color(0xFFBBF7D0)),
                     ),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.shield_outlined, color: AppColors.brandTeal, size: 22),
                         SizedBox(width: 10),
                         Expanded(

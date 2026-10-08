@@ -9,7 +9,7 @@ class WarmupGuidanceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final steps = const [
+    const steps = [
       ('Arm Circles', 'Rotator cuff & shoulder mobility', '1 minute', 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=400&auto=format&fit=crop'),
       ('Leg Swings', 'Hip flexor and hamstring release', '1 minute', 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop'),
       ('Marching in Place', 'Core elevation & rhythmic activation', '2 minutes', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop'),
@@ -55,10 +55,10 @@ class WarmupGuidanceScreen extends StatelessWidget {
                       color: Colors.black87,
                       child: Stack(
                         children: [
-                          Positioned.fill(
+                          const Positioned.fill(
                             child: Opacity(
                               opacity: 0.65,
-                              child: const AppNetworkImage(
+                              child: AppNetworkImage(
                                 url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop',
                                 height: 180,
                                 width: double.infinity,
@@ -96,26 +96,26 @@ class WarmupGuidanceScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   // Why Warm-up Card
-                  AppCard(
-                    padding: const EdgeInsets.all(16),
+                  const AppCard(
+                    padding: EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: const [
+                          children: [
                             Icon(Icons.shield_outlined, color: AppColors.brandTeal, size: 18),
                             SizedBox(width: 8),
                             Text('Why Warm-up?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        const Text(
+                        SizedBox(height: 6),
+                        Text(
                           'A deliberate warm-up increases core body temperature and blood flow to active skeletal muscles. This primes neural activation, expands joint flexibility, and lowers peak physiological stress—directly mitigating your risk of tendon or ligament injury.',
                           style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.4),
                         ),
-                        const SizedBox(height: 14),
+                        SizedBox(height: 14),
                         Row(
-                          children: const [
+                          children: [
                             Expanded(child: _StatChip(label: 'Blood Flow', value: '+35%', color: AppColors.brandTeal)),
                             SizedBox(width: 6),
                             Expanded(child: _StatChip(label: 'Flexibility', value: '+22%', color: AppColors.info)),
@@ -127,9 +127,9 @@ class WarmupGuidanceScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Recommended Warm-up', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       Text('4 Steps • 6 mins total', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                     ],

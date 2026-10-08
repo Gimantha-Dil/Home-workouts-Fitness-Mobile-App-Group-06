@@ -28,8 +28,8 @@ class RoleSelectScreen extends StatelessWidget {
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             AppLogoIcon(size: 26),
             SizedBox(width: 8),
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
@@ -74,10 +74,10 @@ class RoleSelectScreen extends StatelessWidget {
                           child: const Icon(Icons.fitness_center, color: Color(0xFF0284C7), size: 22),
                         ),
                         const SizedBox(width: 14),
-                        Expanded(
+                        const Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text('Trainer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
                               SizedBox(height: 2),
                               Text('Create and manage workout content', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -121,10 +121,10 @@ class RoleSelectScreen extends StatelessWidget {
                           child: const Icon(Icons.shield_outlined, color: AppColors.brandTeal, size: 22),
                         ),
                         const SizedBox(width: 14),
-                        Expanded(
+                        const Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text('Healthcare Advisor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.textPrimary)),
                               SizedBox(height: 2),
                               Text('Manage safety guidance & protocols', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
@@ -148,11 +148,11 @@ class RoleSelectScreen extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const LoginScreen(role: UserRole.admin)),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         Icon(Icons.shield_outlined, size: 18, color: AppColors.textPrimary),
                         SizedBox(width: 6),
                         Text('System Admin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.textPrimary)),

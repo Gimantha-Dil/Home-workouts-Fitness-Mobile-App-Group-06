@@ -37,8 +37,8 @@ class _ReportsAnalyticsScreenState extends State<ReportsAnalyticsScreen> {
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 22),
             SizedBox(width: 6),
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
@@ -54,9 +54,9 @@ class _ReportsAnalyticsScreenState extends State<ReportsAnalyticsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 Text('Reports & Analytics', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 _Badge(text: '• LIVE', color: AppColors.success),
               ],
@@ -107,9 +107,9 @@ class _ReportsAnalyticsScreenState extends State<ReportsAnalyticsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('User Growth Trajectory', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       Text('Apr 01 - Apr 30', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                     ],
@@ -187,9 +187,9 @@ class _ReportsAnalyticsScreenState extends State<ReportsAnalyticsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Export Report', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       Text('Instant Export', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                     ],

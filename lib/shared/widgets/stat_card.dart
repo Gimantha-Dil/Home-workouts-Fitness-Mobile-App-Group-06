@@ -44,7 +44,7 @@ class StatCard extends StatelessWidget {
                 child: Icon(icon, color: c, size: 18),
               ),
               if (trailing != null)
-                Text(trailing!, style: TextStyle(fontSize: 10, color: AppColors.success, fontWeight: FontWeight.bold)),
+                Text(trailing!, style: const TextStyle(fontSize: 10, color: AppColors.success, fontWeight: FontWeight.bold)),
             ],
           ),
           const SizedBox(height: 6),

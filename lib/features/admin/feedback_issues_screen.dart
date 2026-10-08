@@ -183,8 +183,8 @@ class _FeedbackIssuesScreenState extends State<FeedbackIssuesScreen> {
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 22),
             SizedBox(width: 6),
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
@@ -203,9 +203,9 @@ class _FeedbackIssuesScreenState extends State<FeedbackIssuesScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Feedback & Issues', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       Text('Updated just now', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                     ],

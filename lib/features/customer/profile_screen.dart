@@ -155,7 +155,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Text('Auto-Sync Heart Rate Telemetry', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   Switch(
                     value: _healthSyncActive,
-                    activeColor: AppColors.brandTeal,
+                    activeThumbColor: AppColors.brandTeal,
                     onChanged: (v) {
                       setDialogState(() => _healthSyncActive = v);
                       setState(() => _healthSyncActive = v);

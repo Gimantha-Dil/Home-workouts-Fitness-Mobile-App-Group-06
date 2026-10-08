@@ -42,8 +42,8 @@ class _SafetyContentScreenState extends State<SafetyContentScreen> {
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Text('FITPULSE ADVISOR', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal, letterSpacing: 0.5)),
             SizedBox(width: 8),
             Text('Safety Content', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -67,11 +67,11 @@ class _SafetyContentScreenState extends State<SafetyContentScreen> {
                 children: [
                   const Text('Clinical guidance & exercise protocols', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                   const SizedBox(height: 14),
-                  TextField(
+                  const TextField(
                     decoration: InputDecoration(
                       hintText: 'Search safety guides...',
-                      prefixIcon: const Icon(Icons.search, size: 18),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      prefixIcon: Icon(Icons.search, size: 18),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -88,9 +88,9 @@ class _SafetyContentScreenState extends State<SafetyContentScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('SHOWING 6 GUIDES', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
                       Text('• Updated Daily', style: TextStyle(fontSize: 9, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                     ],
@@ -128,8 +128,8 @@ class _SafetyContentScreenState extends State<SafetyContentScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFBBF7D0))),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.info_outline, color: AppColors.brandTeal, size: 18),
                         SizedBox(width: 10),
                         Expanded(
