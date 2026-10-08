@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/models/mock_data.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'workout_details_screen.dart';
 
@@ -29,7 +30,22 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.calendar_today_outlined), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.calendar_today_outlined),
+            onPressed: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                lastDate: DateTime.now().add(const Duration(days: 90)),
+              );
+              if (picked != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Showing plan for ${picked.day}/${picked.month}/${picked.year}')),
+                );
+              }
+            },
+          ),
         ],
       ),
       body: SafeArea(
@@ -109,18 +125,11 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
                         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => WorkoutDetailsScreen(workout: w))),
                         child: Row(
                           children: [
-                            ClipRRect(
+                            AppNetworkImage(
+                              url: w.imageUrl,
+                              width: 60,
+                              height: 60,
                               borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                width: 60,
-                                height: 60,
-                                color: Colors.grey.shade200,
-                                child: Image.network(
-                                  w.imageUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: AppColors.brandTeal),
-                                ),
-                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(

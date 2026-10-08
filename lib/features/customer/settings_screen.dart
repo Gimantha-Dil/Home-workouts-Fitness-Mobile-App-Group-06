@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../core/models/mock_data.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../main.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'reminders_screen.dart';
 import 'safety_guidance_screen.dart';
@@ -347,9 +349,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 20,
-                    backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop'),
+                    child: ClipOval(
+                      child: AppNetworkImage(
+                        url: user?.profilePhotoUrl,
+                        width: 40,
+                        height: 40,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -358,7 +366,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Row(
                           children: [
-                            Text(user?.name ?? 'Nethmi Silva', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text(user?.name ?? 'FitPulse User', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(width: 4),
                             const Icon(Icons.check_circle, size: 14, color: AppColors.brandTeal),
                             const SizedBox(width: 6),
@@ -369,7 +377,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ],
                         ),
-                        Text(user?.email ?? 'nethmi@example.com', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                        Text(user?.email ?? 'user@example.com', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -441,7 +449,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  CircleAvatar(radius: 14, backgroundColor: AppColors.brandTeal.withOpacity(0.12), child: const Icon(Icons.fingerprint, color: AppColors.brandTeal, size: 16)),
+                  CircleAvatar(radius: 14, backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12), child: const Icon(Icons.fingerprint, color: AppColors.brandTeal, size: 16)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -520,7 +528,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFCA5A5))),
               child: InkWell(
-                onTap: () => context.read<AuthProvider>().logout(),
+                onTap: () async {
+                  final navigator = Navigator.of(context);
+                  final auth = context.read<AuthProvider>();
+                  await auth.logout();
+                  navigator.pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AppRoot()),
+                    (route) => false,
+                  );
+                },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
@@ -543,7 +559,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onTap: onTap,
       child: Row(
         children: [
-          CircleAvatar(radius: 14, backgroundColor: color.withOpacity(0.12), child: Icon(icon, color: color, size: 16)),
+          CircleAvatar(radius: 14, backgroundColor: color.withValues(alpha: 0.12), child: Icon(icon, color: color, size: 16)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -557,7 +573,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (badge != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
               child: Text(badge, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
             ),
             const SizedBox(width: 6),
