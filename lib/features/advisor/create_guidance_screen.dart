@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -18,12 +21,152 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   String _category = 'Warm-up';
   String _status = 'Draft';
   bool _saving = false;
+  String? _uploadedImageUrl;
+  String? _uploadedImageName;
 
   @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1080,
+        imageQuality: 80,
+      );
+      if (pickedFile != null) {
+        setState(() => _saving = true);
+        final bytes = await pickedFile.readAsBytes();
+        final user = context.read<AuthProvider>().currentUser;
+        final uid = user?.id ?? 'advisor';
+        final ext = pickedFile.name.contains('.') ? pickedFile.name.split('.').last : 'jpg';
+        final path = 'guidance/$uid/${DateTime.now().millisecondsSinceEpoch}.$ext';
+        final mimeType = ext == 'png' ? 'image/png' : ext == 'webp' ? 'image/webp' : 'image/jpeg';
+
+        await Supabase.instance.client.storage.from('user-photos').uploadBinary(
+          path,
+          Uint8List.fromList(bytes),
+          fileOptions: FileOptions(contentType: mimeType, upsert: true),
+        );
+
+        final publicUrl = Supabase.instance.client.storage.from('user-photos').getPublicUrl(path);
+
+        setState(() {
+          _uploadedImageUrl = publicUrl;
+          _uploadedImageName = pickedFile.name;
+          _saving = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image successfully uploaded to Supabase (user-photos bucket)!'), duration: Duration(seconds: 2)),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload image to Supabase: $e')),
+        );
+      }
+    }
+  }
+
+  void _pickOrUploadImage() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Upload Safety Guidance Image', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 6),
+            const Text('Select an image source from your device gallery or presets.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.photo_library_outlined, color: AppColors.brandTeal)),
+              title: const Text('Upload from Device Gallery', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('Browse photos & images on your device', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _pickImageFromGallery();
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFF3F4F6), child: Icon(Icons.image_outlined, color: AppColors.brandTeal)),
+              title: const Text('Choose Sample Clinical Graphic', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('Sports medicine & physiotherapy banners', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                setState(() {
+                  _uploadedImageUrl = 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop';
+                  _uploadedImageName = 'clinical_warmup_banner.jpg';
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Sample graphic loaded successfully!'), duration: Duration(seconds: 2)),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFE0F2FE), child: Icon(Icons.link, color: AppColors.info)),
+              title: const Text('Enter Image URL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('Paste direct image link', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showUrlInputDialog();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showUrlInputDialog() {
+    final urlController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Enter Image URL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        content: TextField(
+          controller: urlController,
+          decoration: const InputDecoration(hintText: 'https://example.com/image.jpg'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              final url = urlController.text.trim();
+              if (url.isNotEmpty) {
+                Navigator.of(ctx).pop();
+                setState(() {
+                  _uploadedImageUrl = url;
+                  _uploadedImageName = url.split('/').last;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Image loaded successfully!'), duration: Duration(seconds: 2)),
+                );
+              }
+            },
+            child: const Text('Add', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveGuidance() async {
@@ -49,6 +192,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
         'title': title,
         'category': _category,
         'content': content,
+        'imageUrl': _uploadedImageUrl ?? '',
         'status': _status == 'Publish' ? 'Published' : 'Draft',
         'createdBy': uid,
         'authorName': authorName,
@@ -172,24 +316,76 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Drag & Drop Upload Box
-                  Container(
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFCCFBF1), style: BorderStyle.solid),
-                    ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(radius: 16, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.cloud_upload_outlined, color: AppColors.brandTeal, size: 18)),
-                        SizedBox(height: 6),
-                        Text('Click to upload image', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                        Text('or drag and drop your media file', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
+                  // Click Upload Box / Preview Box
+                  _uploadedImageUrl != null
+                      ? Container(
+                          height: 110,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.brandTeal),
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 12),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  _uploadedImageUrl!,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 40, color: AppColors.textSecondary),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_uploadedImageName ?? 'guidance_image.jpg', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                    const SizedBox(height: 2),
+                                    const Text('Ready for publication • 2.4 MB', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                    const SizedBox(height: 6),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _uploadedImageUrl = null;
+                                          _uploadedImageName = null;
+                                        });
+                                      },
+                                      child: const Text('Remove image', style: TextStyle(fontSize: 10, color: AppColors.danger, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : InkWell(
+                          onTap: _pickOrUploadImage,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            height: 100,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFCCFBF1), style: BorderStyle.solid),
+                            ),
+                            child: _saving
+                                ? const Center(child: CircularProgressIndicator())
+                                : const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircleAvatar(radius: 16, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.cloud_upload_outlined, color: AppColors.brandTeal, size: 18)),
+                                      SizedBox(height: 6),
+                                      Text('Click to upload image to Supabase', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                      Text('or drag and drop your media file', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
+                                    ],
+                                  ),
+                          ),
+                        ),
                   const SizedBox(height: 16),
                   const Text('Status', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                   const SizedBox(height: 6),
@@ -264,6 +460,7 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    textStyle: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
