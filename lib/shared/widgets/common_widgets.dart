@@ -83,7 +83,7 @@ class PrimaryButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00A896).withOpacity(0.3),
+            color: const Color(0xFF00A896).withValues(alpha: 0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -123,8 +123,8 @@ class EmptyOrPlaceholderImage extends StatelessWidget {
     return Container(
       height: height,
       width: double.infinity,
-      decoration: BoxDecoration(color: c.withOpacity(0.08), borderRadius: BorderRadius.circular(14)),
-      child: Icon(icon, size: 40, color: c.withOpacity(0.6)),
+      decoration: BoxDecoration(color: c.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(14)),
+      child: Icon(icon, size: 40, color: c.withValues(alpha: 0.6)),
     );
   }
 }
@@ -196,13 +196,13 @@ class AppLogoIcon extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * 0.3),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2DD4BF).withOpacity(0.25),
+            color: const Color(0xFF2DD4BF).withValues(alpha: 0.25),
             blurRadius: size * 0.3,
             offset: Offset(0, size * 0.08),
           ),
         ],
         border: Border.all(
-          color: const Color(0xFF5EEAD4).withOpacity(0.4),
+          color: const Color(0xFF5EEAD4).withValues(alpha: 0.4),
           width: 1.0,
         ),
       ),
@@ -211,7 +211,7 @@ class AppLogoIcon extends StatelessWidget {
         children: [
           Icon(
             Icons.favorite,
-            color: const Color(0xFF14B8A6).withOpacity(0.45),
+            color: const Color(0xFF14B8A6).withValues(alpha: 0.45),
             size: size * 0.65,
           ),
           Icon(
