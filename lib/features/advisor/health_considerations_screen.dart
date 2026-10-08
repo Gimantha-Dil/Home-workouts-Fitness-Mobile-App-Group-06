@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'advisor_settings_screen.dart';
 
 class HealthConsiderationsScreen extends StatefulWidget {
   const HealthConsiderationsScreen({super.key});
@@ -38,7 +39,12 @@ class _HealthConsiderationsScreenState extends State<HealthConsiderationsScreen>
         ),
         title: const Text('Health Consideration', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AdvisorSettingsScreen()),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
@@ -88,7 +94,7 @@ class _HealthConsiderationsScreenState extends State<HealthConsiderationsScreen>
                           padding: const EdgeInsets.all(12),
                           child: Row(
                             children: [
-                              CircleAvatar(radius: 14, backgroundColor: isChecked ? AppColors.brandTeal.withOpacity(0.12) : const Color(0xFFF3F4F6), child: Icon(icon, color: isChecked ? AppColors.brandTeal : AppColors.textSecondary, size: 16)),
+                              CircleAvatar(radius: 14, backgroundColor: isChecked ? AppColors.brandTeal.withValues(alpha: 0.12) : const Color(0xFFF3F4F6), child: Icon(icon, color: isChecked ? AppColors.brandTeal : AppColors.textSecondary, size: 16)),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
