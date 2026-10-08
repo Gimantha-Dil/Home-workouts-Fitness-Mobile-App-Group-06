@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../models/user_role.dart';
 import '../services/cloud_backend_manager.dart';
-import '../services/google_auth_service.dart';
-import '../services/supabase_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _currentUser;
@@ -54,46 +52,7 @@ class AuthProvider extends ChangeNotifier {
       email: cleanEmail,
       role: targetRole,
     );
-
-    // Save user record to Supabase PostgreSQL database
-    await SupabaseService.saveUserToSupabase(
-      uid: _currentUser!.id,
-      name: _currentUser!.name,
-      email: _currentUser!.email,
-      role: _currentUser!.role,
-    );
-
     notifyListeners();
-  }
-
-  Future<bool> loginWithGoogle({UserRole role = UserRole.customer}) async {
-    final user = await GoogleAuthService.signInWithGoogle(role: role);
-    if (user == null) return false;
-
-    _currentUser = user;
-
-    await SupabaseService.saveUserToSupabase(
-      uid: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    );
-
-    notifyListeners();
-    return true;
-  }
-
-  void updateProfilePhoto(String url) {
-    if (_currentUser != null) {
-      _currentUser = _currentUser!.copyWith(profilePhotoUrl: url);
-      SupabaseService.saveUserToSupabase(
-        uid: _currentUser!.id,
-        name: _currentUser!.name,
-        email: _currentUser!.email,
-        role: _currentUser!.role,
-      );
-      notifyListeners();
-    }
   }
 
   void logout() {

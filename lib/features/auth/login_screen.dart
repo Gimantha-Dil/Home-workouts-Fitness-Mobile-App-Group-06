@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/models/mock_data.dart';
 import '../../core/models/user_role.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/services/google_auth_service.dart';
-import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../advisor/advisor_verification_screen.dart';
-import '../customer/active_workout_screen.dart';
 import '../trainer/trainer_verification_screen.dart';
 import 'reset_password_screen.dart';
 import 'role_select_screen.dart';
@@ -71,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _login({String? email, UserRole? role}) async {
+  void _login({String? email, UserRole? role}) {
     if (_isSignUp && email == null) {
       if (widget.role == UserRole.advisor) {
         Navigator.of(context).push(
@@ -89,7 +86,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final targetRole = role ?? widget.role;
     final inputEmail = _emailController.text.trim();
     final inputPassword = _passwordController.text.trim();
-    final inputName = _nameController.text.trim();
 
     if (email == null && (inputEmail.isEmpty || inputPassword.isEmpty)) {
       _showSnack('Please enter a valid email address and password.');
@@ -97,40 +93,23 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final resolvedEmail = email ?? inputEmail;
-    final resolvedName = inputName.isNotEmpty ? inputName : null;
-
-    // Save to Supabase in real-time
-    await SupabaseService.saveUserToSupabase(
-      uid: 'u_${targetRole.name}_${DateTime.now().millisecondsSinceEpoch}',
-      name: resolvedName ?? (resolvedEmail.split('@').first),
-      email: resolvedEmail,
-      role: targetRole,
-    );
-
     context.read<AuthProvider>().login(
       email: resolvedEmail,
       role: targetRole,
-      name: resolvedName,
     );
-
-    if (_isSignUp && targetRole == UserRole.customer && mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => ActiveWorkoutScreen(workout: MockData.workouts.first)),
-      );
-    }
   }
 
   void _loginWithGoogle() async {
-    final ok = await context.read<AuthProvider>().loginWithGoogle(role: widget.role);
-    if (ok && mounted) {
-      if (_isSignUp && widget.role == UserRole.customer) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => ActiveWorkoutScreen(workout: MockData.workouts.first)),
-        );
-      }
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google sign-in අසාර්ථකයි')),
+    final authProvider = context.read<AuthProvider>();
+    final googleUser = await GoogleAuthService.handleGoogleSignIn(
+      context: context,
+      role: widget.role,
+    );
+    if (googleUser != null && mounted) {
+      authProvider.login(
+        email: googleUser.email,
+        name: googleUser.name,
+        role: googleUser.role,
       );
     }
   }
@@ -144,11 +123,22 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.brandTeal),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else if (widget.role != UserRole.customer) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+              );
+            }
+          },
+        ),
         title: Row(
           children: const [
-            AppLogoIcon(size: 26),
-            SizedBox(width: 8),
+            Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 24),
+            SizedBox(width: 6),
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),
@@ -172,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     decoration: BoxDecoration(
-                      gradient: AppColors.buttonGradient,
+                      color: const Color(0xFF0284C7),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(

@@ -1,7 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_role.dart';
-import '../models/workout_model.dart';
 
 /// Supabase Backend Integration (PostgreSQL DB, Storage Buckets, Auth)
 class SupabaseService {
@@ -118,61 +119,30 @@ class SupabaseService {
     return true;
   }
 
-  /// 🗄️ Supabase PostgreSQL Table: Save / Upsert Full Workout Record
+  /// 🗄️ Supabase PostgreSQL Table: Save Workout Record
   static Future<bool> saveWorkoutToSupabase({
-    required Workout workout,
+    required String workoutId,
+    required String title,
+    required String level,
+    required int durationMinutes,
+    required String status,
+    String? videoUrl,
   }) async {
     try {
       if (isInitialized) {
-        await Supabase.instance.client.from('workouts').upsert(workout.toJson());
-        debugPrint('⚡ Workout saved to Supabase PostgreSQL Database: ${workout.title}');
+        await Supabase.instance.client.from('workouts').insert({
+          'id': workoutId,
+          'title': title,
+          'level': level,
+          'duration_minutes': durationMinutes,
+          'status': status,
+          'video_url': videoUrl ?? '',
+          'created_at': DateTime.now().toIso8601String(),
+        });
         return true;
       }
     } catch (e) {
       debugPrint('⚡ Supabase Workout Save Note: $e');
-    }
-    return true;
-  }
-
-  /// 🗄️ Supabase PostgreSQL Table: Fetch Workouts for Customer, Trainer, Advisor, Admin
-  static Future<List<Workout>> fetchWorkoutsFromSupabase() async {
-    try {
-      if (isInitialized) {
-        final response = await Supabase.instance.client
-            .from('workouts')
-            .select()
-            .order('created_at', ascending: false);
-
-        if (response is List) {
-          return response
-              .map((data) => Workout.fromJson(Map<String, dynamic>.from(data)))
-              .toList();
-        }
-      }
-    } catch (e) {
-      debugPrint('⚡ Supabase Fetch Workouts Note: $e');
-    }
-    return [];
-  }
-
-  /// 🗄️ Supabase PostgreSQL Table: Update Workout Review Status (Advisor / Admin Review)
-  static Future<bool> updateWorkoutStatusInSupabase({
-    required String workoutId,
-    required String status,
-    String? reviewerNote,
-  }) async {
-    try {
-      if (isInitialized) {
-        await Supabase.instance.client.from('workouts').update({
-          'status': status,
-          if (reviewerNote != null) 'reviewer_note': reviewerNote,
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', workoutId);
-        debugPrint('⚡ Workout status updated in Supabase to: $status');
-        return true;
-      }
-    } catch (e) {
-      debugPrint('⚡ Supabase Update Status Note: $e');
     }
     return true;
   }

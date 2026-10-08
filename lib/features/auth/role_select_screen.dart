@@ -165,7 +165,9 @@ class RoleSelectScreen extends StatelessWidget {
               // Support Link
               Center(
                 child: TextButton(
-                  onPressed: () {},
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Support Contact: support@fitpulse.com')),
+                  ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
