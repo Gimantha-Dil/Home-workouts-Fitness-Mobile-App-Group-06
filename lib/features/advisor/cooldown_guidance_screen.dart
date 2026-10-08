@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'advisor_settings_screen.dart';
+
+class _CooldownStep {
+  final String title;
+  final String desc;
+  final String duration;
+
+  const _CooldownStep(this.title, this.desc, this.duration);
+}
 
 class CooldownGuidanceScreen extends StatelessWidget {
   const CooldownGuidanceScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final steps = const [
-      ('Light Walking', 'Lower core temperature safely', '2-3 min'),
-      ('Hamstring Stretch', 'Gentle forward hinge, soft knees', '1 min'),
-      ('Quad Stretch', 'Stand tall, stabilize with wall', '1 min'),
-      ('Deep Breathing', '4-second inhale, 6-second exhale', '1-2 min'),
+    const steps = [
+      _CooldownStep('Light Walking', 'Lower core temperature safely', '2-3 min'),
+      _CooldownStep('Hamstring Stretch', 'Gentle forward hinge, soft knees', '1 min'),
+      _CooldownStep('Quad Stretch', 'Stand tall, stabilize with wall', '1 min'),
+      _CooldownStep('Deep Breathing', '4-second inhale, 6-second exhale', '1-2 min'),
     ];
 
     return Scaffold(
@@ -29,7 +39,12 @@ class CooldownGuidanceScreen extends StatelessWidget {
         ),
         title: const Text('Cool-down Guide', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AdvisorSettingsScreen()),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
@@ -52,46 +67,51 @@ class CooldownGuidanceScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   // Hero Video Card
-                  Container(
-                    height: 180,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      height: 180,
+                      width: double.infinity,
                       color: Colors.black87,
-                      borderRadius: BorderRadius.circular(20),
-                      image: const DecorationImage(
-                        image: NetworkImage('https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop'),
-                        fit: BoxFit.cover,
-                        opacity: 0.65,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Opacity(
+                              opacity: 0.65,
+                              child: const AppNetworkImage(
+                                url: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop',
+                                height: 180,
+                                width: double.infinity,
+                              ),
+                            ),
+                          ),
+                          const Center(
+                            child: CircleAvatar(
+                              radius: 26,
+                              backgroundColor: AppColors.brandTeal,
+                              child: Icon(Icons.play_arrow, color: Colors.white, size: 32),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 12,
+                            left: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                              child: const Text('Guided Session', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                              child: const Text('⏱ 2:32', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    child: Stack(
-                      children: [
-                        const Center(
-                          child: CircleAvatar(
-                            radius: 26,
-                            backgroundColor: AppColors.brandTeal,
-                            child: Icon(Icons.play_arrow, color: Colors.white, size: 32),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 12,
-                          left: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                            child: const Text('Guided Session', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 12,
-                          right: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                            child: const Text('⏱ 2:32', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -137,7 +157,7 @@ class CooldownGuidanceScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   ...steps.asMap().entries.map((entry) {
                     final i = entry.key + 1;
-                    final (title, desc, duration) = entry.value;
+                    final step = entry.value;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: AppCard(
@@ -154,15 +174,15 @@ class CooldownGuidanceScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                  Text(desc, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                  Text(step.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text(step.desc, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                 ],
                               ),
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(6)),
-                              child: Text(duration, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                              child: Text(step.duration, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                             ),
                             const SizedBox(width: 8),
                             const Icon(Icons.check_box_outline_blank, color: AppColors.textSecondary, size: 20),
