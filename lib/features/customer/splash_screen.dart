@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF06302B),
+      backgroundColor: const Color(0xFF082721),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -14,7 +28,7 @@ class SplashScreen extends StatelessWidget {
           gradient: LinearGradient(
             colors: [
               Color(0xFF0F544B),
-              Color(0xFF083C36),
+              Color(0xFF082721),
               Color(0xFF04201D),
             ],
             begin: Alignment.topCenter,

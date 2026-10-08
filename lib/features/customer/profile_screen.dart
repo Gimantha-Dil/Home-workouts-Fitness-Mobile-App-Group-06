@@ -1,15 +1,18 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/mock_data.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/history_provider.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../main.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'customer_shell.dart';
 import 'profile_setup_screen.dart';
 import 'settings_screen.dart';
 import 'workout_details_screen.dart';
@@ -107,8 +110,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: Row(
-            children: const [
+          title: const Row(
+            children: [
               Icon(Icons.sync, color: AppColors.brandTeal, size: 22),
               SizedBox(width: 8),
               Text('Health App Sync', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -186,8 +189,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.download_done, color: AppColors.info, size: 22),
             SizedBox(width: 8),
             Text('Offline Workouts (3)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -252,8 +255,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Icon(Icons.verified, color: AppColors.success, size: 22),
             SizedBox(width: 8),
             Text('Medical Clearance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -270,9 +273,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFFBBF7D0)),
               ),
-              child: Column(
+              child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text('CLINICAL CARDIOLOGY CLEARANCE', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal, letterSpacing: 0.5)),
                   SizedBox(height: 4),
                   Text('Certified Active', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.success)),
@@ -309,14 +312,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const CustomerShell()),
+              );
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Text('Profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(width: 8),
-            Text('FITPULSE PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+            Text('FITPULSE MEMBER', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
           ],
         ),
         actions: [
@@ -371,103 +378,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(20)),
-                    child: const Text('★ PRO MEMBER • 6 MONTH JOURNEY', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                    child: Text('★ MEMBER • ${user?.role.name.toUpperCase() ?? "CUSTOMER"}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 20),
 
-            // Stats Row
-            Row(
-              children: const [
-                Expanded(child: _ProfileStat(value: '24', label: 'WORKOUTS', icon: Icons.fullscreen_exit, color: AppColors.info)),
-                SizedBox(width: 8),
-                Expanded(child: _ProfileStat(value: '14', label: 'DAY STREAK', icon: Icons.local_fire_department, color: AppColors.warning)),
-                SizedBox(width: 8),
-                Expanded(child: _ProfileStat(value: '5,420', label: 'TOTAL KCAL', icon: Icons.bolt, color: AppColors.purple)),
-              ],
+            // Real Progress Stats Row
+            Consumer<HistoryProvider>(
+              builder: (context, history, _) {
+                return Row(
+                  children: [
+                    Expanded(child: _ProfileStat(value: '${history.totalSessions}', label: 'WORKOUTS', icon: Icons.fitness_center, color: AppColors.info)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _ProfileStat(value: '${history.streakDays}', label: 'DAY STREAK', icon: Icons.local_fire_department, color: AppColors.warning)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _ProfileStat(value: '${history.totalCaloriesBurned}', label: 'TOTAL KCAL', icon: Icons.bolt, color: AppColors.purple)),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 16),
 
-            // Fitness Baselines Card
-            AppCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text('Fitness Baselines', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      Text('• Clinical Sync', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      _MetricItem(label: 'HEIGHT', value: '165 cm'),
-                      _MetricItem(label: 'WEIGHT', value: '60.0 kg'),
-                      _MetricItem(label: 'FITNESS LEVEL', value: 'Beginner'),
-                      _MetricItem(label: 'TARGET FOCUS', value: 'Mobility & Loss'),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.brandTeal,
-                        minimumSize: const Size.fromHeight(40),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            // Real Fitness Baselines Card from Firestore
+            StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance.collection('users').doc(user?.id ?? '').snapshots(),
+              builder: (context, docSnap) {
+                final data = docSnap.data?.data();
+                final profile = data?['profile'] as Map<String, dynamic>?;
+                final goalsList = (data?['goals'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+                final targetFocus = goalsList.isNotEmpty ? goalsList.first : 'General Fitness';
+
+                final height = profile?['height']?.toString() ?? '160 cm';
+                final weight = profile?['weight']?.toString() ?? '80.0 kg';
+                final level = profile?['fitnessLevel']?.toString() ?? 'Beginner';
+
+                return AppCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Fitness Baselines', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text('• Clinical Sync', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                        ],
                       ),
-                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileSetupScreen())),
-                      child: const Text('Update Biometrics & Goals →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Active Routine Card
-            AppCard(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text('Active Routine', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      Text('Day 14 of 30', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _MetricItem(label: 'HEIGHT', value: height),
+                          _MetricItem(label: 'WEIGHT', value: weight),
+                          _MetricItem(label: 'FITNESS LEVEL', value: level),
+                          _MetricItem(label: 'TARGET FOCUS', value: targetFocus),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.brandTeal,
+                            minimumSize: const Size.fromHeight(40),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileSetupScreen())),
+                          child: const Text('Update Biometrics & Goals →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  const Text('Beginner Full Body Routine', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  const SizedBox(height: 2),
-                  const Text('Supervised by Coach Alex Carter', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text('Overall Program Completion', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                      Text('46%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: const LinearProgressIndicator(
-                      value: 0.46,
-                      minHeight: 6,
-                      backgroundColor: Color(0xFFE5E7EB),
-                      valueColor: AlwaysStoppedAnimation(AppColors.brandTeal),
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 16),
 

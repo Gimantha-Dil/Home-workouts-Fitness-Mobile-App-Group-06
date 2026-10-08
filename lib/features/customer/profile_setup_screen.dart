@@ -18,8 +18,52 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String _heightUnit = 'cm';
   String _weightUnit = 'kg';
   String _fitnessLevel = 'Beginner';
-  final _heightController = TextEditingController(text: '175');
-  final _weightController = TextEditingController(text: '68');
+  final _heightController = TextEditingController(text: '160');
+  final _weightController = TextEditingController(text: '80');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingProfile();
+  }
+
+  Future<void> _loadExistingProfile() async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final docSnap = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (docSnap.exists && docSnap.data() != null) {
+        final data = docSnap.data()!;
+        final profile = data['profile'] as Map<String, dynamic>?;
+
+        if (profile != null) {
+          final heightRaw = profile['height']?.toString() ?? '160 cm';
+          final weightRaw = profile['weight']?.toString() ?? '80 kg';
+
+          final heightParts = heightRaw.trim().split(' ');
+          final heightNum = heightParts.first;
+          final heightUnit = heightParts.length > 1 ? heightParts.last : 'cm';
+
+          final weightParts = weightRaw.trim().split(' ');
+          final weightNum = weightParts.first;
+          final weightUnit = weightParts.length > 1 ? weightParts.last : 'kg';
+
+          setState(() {
+            _ageRange = profile['ageRange']?.toString() ?? '18 - 25 years';
+            _gender = profile['gender']?.toString() ?? 'Male';
+            _fitnessLevel = profile['fitnessLevel']?.toString() ?? 'Beginner';
+            _heightUnit = heightUnit;
+            _weightUnit = weightUnit;
+            _heightController.text = heightNum;
+            _weightController.text = weightNum;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading existing profile biometrics: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -61,7 +105,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             }
           },
         ),
-        title: const Text('Active Workout Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Profile Calibration', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),
@@ -133,7 +177,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                initialValue: _ageRange,
+                value: _ageRange,
                 decoration: const InputDecoration(
                   contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   prefixIcon: Icon(Icons.airline_seat_recline_normal, color: AppColors.brandTeal, size: 18),

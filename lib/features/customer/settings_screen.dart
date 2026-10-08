@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../main.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'customer_shell.dart';
 import 'reminders_screen.dart';
 import 'safety_guidance_screen.dart';
 
@@ -18,7 +19,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _faceId = true;
-  String _theme = 'Light Mode';
   String _units = 'Metric (kg, cm)';
   String _language = 'English (US)';
   bool _appleHealthSync = true;
@@ -27,31 +27,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-    );
-  }
-
-  void _openAppearanceDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Appearance & Theme', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['Light Mode', 'Dark Mode', 'System Default'].map((mode) {
-            return RadioListTile<String>(
-              title: Text(mode, style: const TextStyle(fontSize: 13)),
-              value: mode,
-              groupValue: _theme,
-              activeColor: AppColors.brandTeal,
-              onChanged: (v) {
-                setState(() => _theme = v!);
-                Navigator.of(ctx).pop();
-                _showSnack('Theme changed to $_theme');
-              },
-            );
-          }).toList(),
-        ),
-      ),
     );
   }
 
@@ -329,6 +304,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const CustomerShell()),
+              );
             }
           },
         ),
@@ -399,15 +378,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               AppColors.warning,
               badge: 'Sound ON',
               onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RemindersScreen())),
-            ),
-            const SizedBox(height: 8),
-            _settingRow(
-              Icons.color_lens_outlined,
-              'Appearance & Theme',
-              'High contrast, system syn',
-              AppColors.purple,
-              badge: '☀ $_theme',
-              onTap: _openAppearanceDialog,
             ),
             const SizedBox(height: 8),
             _settingRow(
