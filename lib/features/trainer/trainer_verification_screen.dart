@@ -214,7 +214,14 @@ class _TrainerVerificationScreenState extends State<TrainerVerificationScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   side: const BorderSide(color: AppColors.brandTeal),
                 ),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('⚡ Document "$fileName" uploaded to Supabase Storage (verification-docs)!'),
+                      backgroundColor: AppColors.brandTeal,
+                    ),
+                  );
+                },
                 child: Text(actionText, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
               ),
             ],

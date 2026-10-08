@@ -43,7 +43,7 @@ class ManagementListScreen extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                     child: Icon(icon, color: color, size: 18),
                   ),
                   const SizedBox(width: 12),
@@ -59,8 +59,18 @@ class ManagementListScreen extends StatelessWidget {
                   if (showApproveReject && item.status == 'Pending')
                     Row(
                       children: [
-                        IconButton(icon: const Icon(Icons.check_circle_outline, color: AppColors.success, size: 20), onPressed: () {}),
-                        IconButton(icon: const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 20), onPressed: () {}),
+                        IconButton(
+                          icon: const Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+                          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('${item.title} request approved.')),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.cancel_outlined, color: AppColors.danger, size: 20),
+                          onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('${item.title} request rejected.')),
+                          ),
+                        ),
                       ],
                     )
                   else

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../main.dart';
+import '../../shared/screens/notification_center_screen.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'advisor_management_screen.dart';
 import 'safety_content_management_screen.dart';
@@ -26,30 +28,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
     );
   }
 
-  void _openAppearanceDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Console Appearance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['Light Mode', 'Dark Mode', 'High-Contrast Wireframe'].map((a) {
-            return RadioListTile<String>(
-              title: Text(a, style: const TextStyle(fontSize: 13)),
-              value: a,
-              groupValue: _appearance,
-              activeColor: AppColors.brandTeal,
-              onChanged: (v) {
-                setState(() => _appearance = v!);
-                Navigator.of(ctx).pop();
-                _showSnack('Console appearance set to $_appearance');
-              },
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
+
 
   void _openLocaleDialog() {
     showDialog(
@@ -182,7 +161,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_none, size: 20), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.notifications_none, size: 20),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationCenterScreen()),
+            ),
+          ),
           Container(
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.all(4),
@@ -202,7 +186,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: AppColors.brandTeal.withOpacity(0.12),
+                    backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12),
                     child: const Icon(Icons.admin_panel_settings, color: AppColors.brandTeal, size: 22),
                   ),
                   const SizedBox(width: 12),
@@ -221,7 +205,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
                             ),
                           ],
                         ),
-                        Text(user?.email ?? 'admin@fitpulse.system', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                        Text(user?.email ?? 'admin@example.com', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                         const Text('Global Infrastructure & Security Officer', style: TextStyle(fontSize: 9, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                       ],
                     ),
@@ -244,7 +228,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  CircleAvatar(radius: 14, backgroundColor: AppColors.warning.withOpacity(0.12), child: const Icon(Icons.build_circle_outlined, color: AppColors.warning, size: 16)),
+                  CircleAvatar(radius: 14, backgroundColor: AppColors.warning.withValues(alpha: 0.12), child: const Icon(Icons.build_circle_outlined, color: AppColors.warning, size: 16)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -269,15 +253,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            _settingTile(
-              Icons.color_lens_outlined,
-              'Console Appearance',
-              'High-contrast wireframe theme',
-              AppColors.purple,
-              badge: '☀ $_appearance',
-              onTap: _openAppearanceDialog,
-            ),
-            const SizedBox(height: 8),
+
             _settingTile(
               Icons.language_outlined,
               'System Language & Locale',
@@ -344,7 +320,12 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFCA5A5))),
               child: InkWell(
-                onTap: () => context.read<AuthProvider>().logout(),
+                onTap: () async {
+                  await context.read<AuthProvider>().logout();
+                  if (context.mounted) {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
+                },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
@@ -367,7 +348,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       onTap: onTap,
       child: Row(
         children: [
-          CircleAvatar(radius: 14, backgroundColor: color.withOpacity(0.12), child: Icon(icon, color: color, size: 16)),
+          CircleAvatar(radius: 14, backgroundColor: color.withValues(alpha: 0.12), child: Icon(icon, color: color, size: 16)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -381,7 +362,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
           if (badge != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
               child: Text(badge, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
             ),
             const SizedBox(width: 6),
