@@ -141,7 +141,7 @@ class _ReportsAnalyticsScreenState extends State<ReportsAnalyticsScreen> {
                             color: AppColors.brandTeal,
                             barWidth: 3,
                             dotData: const FlDotData(show: false),
-                            belowBarData: BarAreaData(show: true, color: AppColors.brandTeal.withOpacity(0.12)),
+                            belowBarData: BarAreaData(show: true, color: AppColors.brandTeal.withValues(alpha: 0.12)),
                           ),
                         ],
                       ),
@@ -258,7 +258,7 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
       child: Text(text, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color)),
     );
   }
