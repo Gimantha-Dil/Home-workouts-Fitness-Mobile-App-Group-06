@@ -97,12 +97,36 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
             final draftCount = docs.where((w) => w.status == 'Draft').length;
             final reviewCount = docs.where((w) => w.status == 'Under Review').length;
 
+            final isApproved = user?.verificationStatus == 'approved';
+
             return Column(
               children: [
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.all(20),
                     children: [
+                      if (!isApproved)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: Row(
+                            children: const [
+                              Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Account Pending Admin Approval: You can view your dashboard, but adding/publishing workouts is locked until the admin verifies your credentials.',
+                                  style: TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -114,7 +138,15 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CreateWorkoutScreen())),
+                            onPressed: () {
+                              if (!isApproved) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Admin approval is required before you can create workouts.')),
+                                );
+                                return;
+                              }
+                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CreateWorkoutScreen()));
+                            },
                             icon: const Icon(Icons.add, size: 14),
                             label: const Text('Create', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                           ),
