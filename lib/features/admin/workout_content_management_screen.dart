@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../core/models/workout_model.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 
@@ -86,10 +88,19 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
-              onPressed: () {
+              onPressed: () async {
                 final title = titleCtrl.text.trim();
                 final trainer = trainerCtrl.text.trim();
                 if (title.isNotEmpty) {
+                  final newWorkout = Workout(
+                    id: 'w_admin_${DateTime.now().millisecondsSinceEpoch}',
+                    title: title,
+                    level: level,
+                    durationMinutes: 25,
+                    status: 'Published',
+                  );
+                  await SupabaseService.saveWorkoutToSupabase(workout: newWorkout);
+
                   setState(() {
                     _workouts.insert(
                       0,
@@ -104,8 +115,10 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
                       ),
                     );
                   });
-                  Navigator.of(ctx).pop();
-                  _showSnack('Workout program "$title" published!');
+                  if (context.mounted) {
+                    Navigator.of(ctx).pop();
+                    _showSnack('Workout program "$title" published & saved to Supabase!');
+                  }
                 }
               },
               child: const Text('Publish Program', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -315,12 +328,16 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
                                       padding: const EdgeInsets.symmetric(horizontal: 10),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                     ),
-                                    onPressed: () {
+                                    onPressed: () async {
+                                      await SupabaseService.updateWorkoutStatusInSupabase(
+                                        workoutId: w.id,
+                                        status: 'Published',
+                                      );
                                       setState(() {
                                         w.status = 'Published';
                                         w.statusColor = AppColors.success;
                                       });
-                                      _showSnack('${w.title} approved and published!');
+                                      _showSnack('${w.title} approved and synced to Supabase!');
                                     },
                                     child: const Text('Review & Approve', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                                   )
@@ -384,7 +401,7 @@ class _SummaryBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -412,7 +429,7 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
       child: Text(text, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
     );
   }

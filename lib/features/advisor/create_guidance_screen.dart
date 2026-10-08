@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 
@@ -14,6 +17,60 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   final _contentController = TextEditingController();
   String _category = 'Warm-up';
   String _status = 'Draft';
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveGuidance() async {
+    final title = _titleController.text.trim();
+    final content = _contentController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a guidance title.')),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+
+    try {
+      final user = context.read<AuthProvider>().currentUser;
+      final uid = user?.id ?? '';
+      final authorName = user?.name ?? 'Healthcare Advisor';
+
+      final docRef = FirebaseFirestore.instance.collection('safetyContent').doc();
+      await docRef.set({
+        'id': docRef.id,
+        'title': title,
+        'category': _category,
+        'content': content,
+        'status': _status == 'Publish' ? 'Published' : 'Draft',
+        'createdBy': uid,
+        'authorName': authorName,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Guidance "$title" saved successfully in Firestore!')),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save guidance: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +87,8 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
             }
           },
         ),
-        title: Row(
-          children: const [
+        title: const Row(
+          children: [
             Text('Create Safety Guidance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(width: 6),
             _Badge(text: '• H04', color: AppColors.brandTeal),
@@ -45,9 +102,9 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Title *', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                       Text('0/80', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                     ],
@@ -69,9 +126,9 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     onChanged: (v) => setState(() => _category = v!),
                   ),
                   const SizedBox(height: 16),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Content *', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                       Text('Markdown supported', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
                     ],
@@ -84,8 +141,8 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       color: Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
                     ),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.format_bold, size: 18, color: AppColors.textSecondary),
                         SizedBox(width: 8),
                         Icon(Icons.format_italic, size: 18, color: AppColors.textSecondary),
@@ -107,9 +164,9 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text('Add Image (optional)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                       Text('JPG, PNG up to 5MB', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
                     ],
@@ -123,9 +180,9 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFCCFBF1), style: BorderStyle.solid),
                     ),
-                    child: Column(
+                    child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         CircleAvatar(radius: 16, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.cloud_upload_outlined, color: AppColors.brandTeal, size: 18)),
                         SizedBox(height: 6),
                         Text('Click to upload image', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
@@ -178,10 +235,13 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  PrimaryButton(
-                    label: 'Save Guidance →',
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
+                  if (_saving)
+                    const CircularProgressIndicator()
+                  else
+                    PrimaryButton(
+                      label: 'Save Guidance →',
+                      onPressed: _saveGuidance,
+                    ),
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -206,7 +266,7 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
       child: Text(text, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
     );
   }

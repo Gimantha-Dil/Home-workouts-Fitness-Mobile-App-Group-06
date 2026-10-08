@@ -261,12 +261,12 @@ class _SafetyContentManagementScreenState extends State<SafetyContentManagementS
                       prefixIcon: const Icon(Icons.search, size: 18),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear, size: 16),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
+                        icon: const Icon(Icons.clear, size: 16),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
                           : null,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     ),
@@ -378,7 +378,7 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
       child: Text(text, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
     );
   }

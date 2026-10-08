@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/models/user_role.dart';
 import '../../core/providers/auth_provider.dart';
-import '../../core/services/google_auth_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
+import '../auth/role_select_screen.dart';
+import 'advisor_shell.dart';
 import 'advisor_verification_screen.dart';
 
 class AdvisorRegistrationScreen extends StatefulWidget {
@@ -15,50 +15,123 @@ class AdvisorRegistrationScreen extends StatefulWidget {
 }
 
 class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
-  final _nameController = TextEditingController(text: 'Dr. Alex Morgan, MD');
-  final _emailController = TextEditingController(text: 'alex.morgan@healthclinic.org');
-  final _passwordController = TextEditingController(text: 'SuperSecurePass123!');
-  final _confirmPasswordController = TextEditingController(text: 'SuperSecurePass123!');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscure = true;
-  bool _agreeTerms = true;
+  bool _agreeTerms = false;
   bool _isSignUp = true;
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   void _showSnack(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
     );
   }
 
-  void _loginWithGoogle() async {
+  Future<void> _loginWithGoogle() async {
+    setState(() => _loading = true);
     final authProvider = context.read<AuthProvider>();
-    final googleUser = await GoogleAuthService.handleGoogleSignIn(
-      context: context,
-      role: UserRole.advisor,
-    );
-    if (googleUser != null && mounted) {
-      authProvider.login(
-        email: googleUser.email,
-        name: googleUser.name,
-        role: googleUser.role,
-      );
-    }
-  }
+    final error = await authProvider.loginWithGoogle();
 
-  void _submitAction() {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      _showSnack('Please enter your email address.');
-      return;
-    }
+    if (!mounted) return;
+    setState(() => _loading = false);
 
-    if (_isSignUp) {
+    if (error != null) {
+      _showSnack(error);
+    } else if (_isSignUp) {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => const AdvisorVerificationScreen()),
       );
     } else {
-      context.read<AuthProvider>().login(
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AdvisorShell()),
+            (route) => false,
+      );
+    }
+  }
+
+  Future<void> _submitAction() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
+    final confirmPass = _confirmPasswordController.text.trim();
+
+    final emailRegex = RegExp(r'^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (email.isEmpty || !emailRegex.hasMatch(email)) {
+      _showSnack('Please enter a valid email address.');
+      return;
+    }
+
+    if (password.isEmpty) {
+      _showSnack('Please enter your password.');
+      return;
+    }
+
+    if (_isSignUp) {
+      if (name.isEmpty) {
+        _showSnack('Please enter your full name.');
+        return;
+      }
+
+      final passRegex = RegExp(r'^(?=.*[0-9]).{8,}$');
+      if (!passRegex.hasMatch(password)) {
+        _showSnack('Password must be at least 8 characters long and contain at least 1 number.');
+        return;
+      }
+
+      if (confirmPass != password) {
+        _showSnack('Passwords do not match.');
+        return;
+      }
+
+      if (!_agreeTerms) {
+        _showSnack('Please agree to Clinical Terms of Service & Healthcare Advisory Ethics.');
+        return;
+      }
+    }
+
+    setState(() => _loading = true);
+    final authProvider = context.read<AuthProvider>();
+
+    String? error;
+    if (_isSignUp) {
+      error = await authProvider.signUp(
+        name: name,
         email: email,
-        role: email.toLowerCase() == 'gimantha333@gmail.com' ? UserRole.admin : UserRole.advisor,
+        password: password,
+      );
+    } else {
+      error = await authProvider.login(
+        email: email,
+        password: password,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (error != null) {
+      _showSnack(error);
+    } else if (_isSignUp) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const AdvisorVerificationScreen()),
+      );
+    } else {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AdvisorShell()),
+            (route) => false,
       );
     }
   }
@@ -73,18 +146,28 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+            );
           },
         ),
-        title: Row(
-          children: const [
-            Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 24),
+        title: const Row(
+          children: [
+            AppLogoIcon(size: 24),
             SizedBox(width: 6),
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
+            SizedBox(width: 6),
+            _Badge(text: 'FITPULSE ADVISOR', color: AppColors.brandTeal),
           ],
         ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(12)),
+            child: const Text('Step 1 of 2', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -92,11 +175,7 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(12)),
-                child: const Text('ADVISOR ACCREDITATION PORTAL', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-              ),
+              const _Badge(text: 'ADVISOR ACCREDITATION PORTAL', color: AppColors.brandTeal),
               const SizedBox(height: 8),
               Text(_isSignUp ? 'Advisor Registration' : 'Advisor Log In', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
               const SizedBox(height: 4),
@@ -113,31 +192,31 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => setState(() => _isSignUp = false),
+                        onTap: _loading ? null : () => setState(() => _isSignUp = false),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: !_isSignUp ? Colors.white : Colors.transparent,
+                            color: !_isSignUp ? Colors.black : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: !_isSignUp ? [const BoxShadow(color: Color(0x14000000), blurRadius: 4)] : null,
                           ),
-                          child: Text('Log In', style: TextStyle(fontWeight: FontWeight.w600, color: !_isSignUp ? AppColors.textPrimary : AppColors.textSecondary)),
+                          child: Text('Log In', style: TextStyle(fontWeight: FontWeight.w600, color: !_isSignUp ? Colors.white : AppColors.textSecondary)),
                         ),
                       ),
                     ),
                     Expanded(
                       child: GestureDetector(
-                        onTap: () => setState(() => _isSignUp = true),
+                        onTap: _loading ? null : () => setState(() => _isSignUp = true),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: _isSignUp ? Colors.white : Colors.transparent,
+                            color: _isSignUp ? Colors.black : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: _isSignUp ? [const BoxShadow(color: Color(0x14000000), blurRadius: 4)] : null,
                           ),
-                          child: Text('Sign Up', style: TextStyle(fontWeight: FontWeight.w600, color: _isSignUp ? AppColors.textPrimary : AppColors.textSecondary)),
+                          child: Text('Sign Up', style: TextStyle(fontWeight: FontWeight.w600, color: _isSignUp ? Colors.white : AppColors.textSecondary)),
                         ),
                       ),
                     ),
@@ -146,31 +225,56 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
               ),
               const SizedBox(height: 20),
               if (_isSignUp) ...[
-                const Text('FULL LEGAL NAME', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('FULL LEGAL NAME', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                    Text('REQUIRED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                  ],
+                ),
                 const SizedBox(height: 4),
                 TextField(
                   controller: _nameController,
+                  enabled: !_loading,
                   decoration: const InputDecoration(
+                    hintText: 'Dr. Alex Morgan, MD',
                     prefixIcon: Icon(Icons.person_outline),
                   ),
                 ),
                 const SizedBox(height: 14),
               ],
-              const Text('PROFESSIONAL EMAIL', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('PROFESSIONAL EMAIL', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                  Text('REQUIRED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                ],
+              ),
               const SizedBox(height: 4),
               TextField(
                 controller: _emailController,
+                enabled: !_loading,
+                keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
+                  hintText: 'alex.morgan@healthclinic.org',
                   prefixIcon: Icon(Icons.alternate_email),
                 ),
               ),
               const SizedBox(height: 14),
-              const Text('PASSWORD', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('PASSWORD', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                  Text('MIN 8 CHARS', style: TextStyle(fontSize: 8, color: AppColors.textSecondary)),
+                ],
+              ),
               const SizedBox(height: 4),
               TextField(
                 controller: _passwordController,
+                enabled: !_loading,
                 obscureText: _obscure,
                 decoration: InputDecoration(
+                  hintText: 'Enter password',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
@@ -180,29 +284,30 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
               ),
               if (_isSignUp) ...[
                 const SizedBox(height: 14),
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
+                  children: [
                     Text('CONFIRM PASSWORD', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
-                    Text('MATCH GUARANTEED', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                    Text('MATCH GUARANTEED', style: TextStyle(fontSize: 8, color: AppColors.textSecondary)),
                   ],
                 ),
                 const SizedBox(height: 4),
                 TextField(
                   controller: _confirmPasswordController,
+                  enabled: !_loading,
                   obscureText: true,
                   decoration: const InputDecoration(
+                    hintText: 'Re-enter password',
                     prefixIcon: Icon(Icons.lock_outline),
                   ),
                 ),
                 const SizedBox(height: 14),
-                // Clinical Verification Card
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFBBF7D0))),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.verified_user, color: AppColors.brandTeal, size: 20),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.verified, color: AppColors.brandTeal, size: 20),
                       SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -224,7 +329,7 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
                     Checkbox(
                       value: _agreeTerms,
                       activeColor: AppColors.brandTeal,
-                      onChanged: (v) => setState(() => _agreeTerms = v!),
+                      onChanged: _loading ? null : (v) => setState(() => _agreeTerms = v ?? false),
                     ),
                     const Expanded(
                       child: Text('I agree to FitPulse Clinical Terms of Service & Healthcare Advisory Ethics', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
@@ -233,46 +338,36 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
                 ),
               ],
               const SizedBox(height: 16),
-              PrimaryButton(
-                label: _isSignUp ? 'Create Account →' : 'Log In as Advisor →',
-                onPressed: _submitAction,
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: const [
-                  Expanded(child: Divider()),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text('OR CONTINUE WITH', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, letterSpacing: 0.5)),
-                  ),
-                  Expanded(child: Divider()),
-                ],
-              ),
-              const SizedBox(height: 14),
-              // Real Google Account Sign-In Button
-              OutlinedButton.icon(
-                onPressed: _loginWithGoogle,
-                icon: const Text('G', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFEA4335), fontSize: 18)),
-                label: const Text('Continue with Google', style: TextStyle(fontWeight: FontWeight.bold)),
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () {
-                  context.read<AuthProvider>().login(email: 'silva.fernando@fitpulse.health', role: UserRole.advisor);
-                },
-                icon: const Icon(Icons.apple, color: Colors.black, size: 20),
-                label: const Text('Continue with Apple'),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
+              if (_loading)
+                const Center(child: CircularProgressIndicator())
+              else ...[
+                PrimaryButton(
+                  label: _isSignUp ? 'Create Account →' : 'Log In as Advisor →',
+                  onPressed: _submitAction,
                 ),
-              ),
+                const SizedBox(height: 20),
+                const Row(
+                  children: [
+                    Expanded(child: Divider()),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      child: Text('OR CONTINUE WITH', style: TextStyle(color: AppColors.textSecondary, fontSize: 10, letterSpacing: 0.5)),
+                    ),
+                    Expanded(child: Divider()),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                OutlinedButton.icon(
+                  onPressed: _loginWithGoogle,
+                  icon: const Text('G', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFEA4335), fontSize: 18)),
+                  label: const Text('Continue with Google', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                ),
+              ],
               const SizedBox(height: 16),
               Center(
                 child: TextButton(
-                  onPressed: () => setState(() => _isSignUp = !_isSignUp),
+                  onPressed: _loading ? null : () => setState(() => _isSignUp = !_isSignUp),
                   child: Text(
                     _isSignUp ? 'Already registered as an Advisor? Log In' : 'Don\'t have an Advisor account? Sign Up',
                     style: const TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 12),
@@ -283,6 +378,21 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final String text;
+  final Color color;
+  const _Badge({required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+      child: Text(text, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
     );
   }
 }

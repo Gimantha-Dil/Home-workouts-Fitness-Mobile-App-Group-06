@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'advisor_settings_screen.dart';
 
 class ExercisePrecautionsScreen extends StatelessWidget {
   const ExercisePrecautionsScreen({super.key});
@@ -31,7 +33,12 @@ class ExercisePrecautionsScreen extends StatelessWidget {
         ),
         title: const Text('Exercise Precautions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AdvisorSettingsScreen()),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
@@ -61,21 +68,24 @@ class ExercisePrecautionsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  // Photo Banner
                   ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
                       height: 100,
-                      decoration: const BoxDecoration(
-                        image: DecorationImage(
-                          image: NetworkImage('https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop'),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      child: Container(
-                        color: Colors.black45,
+                      color: Colors.black45,
+                      child: Stack(
                         alignment: Alignment.center,
-                        child: const Text('FOUNDATION • FORM • LONGEVITY', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
+                        children: [
+                          const Positioned.fill(
+                            child: AppNetworkImage(
+                              url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop',
+                              height: 100,
+                              width: double.infinity,
+                            ),
+                          ),
+                          Container(color: Colors.black38),
+                          const Text('FOUNDATION • FORM • LONGEVITY', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1)),
+                        ],
                       ),
                     ),
                   ),
@@ -91,7 +101,7 @@ class ExercisePrecautionsScreen extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 14,
-                              backgroundColor: color.withOpacity(0.12),
+                              backgroundColor: color.withValues(alpha: 0.12),
                               child: Icon(icon, color: color, size: 16),
                             ),
                             const SizedBox(width: 10),
@@ -137,7 +147,7 @@ class _Badge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
       child: Text(text, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color)),
     );
   }
