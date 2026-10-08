@@ -1,65 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/models/workout_model.dart';
-import '../../core/services/supabase_service.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/repositories/workout_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'trainer_shell.dart';
 
 class PublishWorkoutScreen extends StatefulWidget {
-  final Workout workout;
+  final String title;
+  final String level;
+  final String duration;
 
-  const PublishWorkoutScreen({super.key, required this.workout});
+  const PublishWorkoutScreen({super.key, required this.title, required this.level, required this.duration});
 
   @override
   State<PublishWorkoutScreen> createState() => _PublishWorkoutScreenState();
 }
 
 class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
-  bool _isSaving = false;
+  bool _publishing = false;
 
-  Future<void> _handleSaveWorkout(String status) async {
-    setState(() => _isSaving = true);
+  Future<void> _publishWorkout(BuildContext context) async {
+    final user = context.read<AuthProvider>().currentUser;
+    if (user == null) return;
 
-    final updatedWorkout = Workout(
-      id: widget.workout.id,
-      title: widget.workout.title,
-      description: widget.workout.description,
-      level: widget.workout.level,
-      durationMinutes: widget.workout.durationMinutes,
-      goal: widget.workout.goal,
-      status: status,
-      imageUrl: widget.workout.imageUrl,
-      videoUrl: widget.workout.videoUrl,
-      exercises: widget.workout.exercises,
-    );
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
-    // Persist full workout record to Supabase PostgreSQL table & Storage
-    await SupabaseService.saveWorkoutToSupabase(workout: updatedWorkout);
+    setState(() => _publishing = true);
 
-    if (mounted) {
-      setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('⚡ Workout "${updatedWorkout.title}" ($status) synced to Supabase!'),
-          backgroundColor: AppColors.brandTeal,
-        ),
+    try {
+      final repo = WorkoutRepository();
+      final workout = Workout(
+        id: '',
+        title: widget.title,
+        description: 'Custom trainer workout routine published to FitPulse catalog.',
+        level: widget.level,
+        durationMinutes: int.tryParse(widget.duration.replaceAll(RegExp(r'[^0-9]'), '')) ?? 20,
+        status: 'Published',
+        exercises: const [
+          Exercise(id: 'ex1', name: 'Warm-up Arm Circles', sets: 1, reps: 10, restSeconds: 15),
+          Exercise(id: 'ex2', name: 'Kneeling Push-ups', sets: 3, reps: 10, restSeconds: 30),
+        ],
       );
 
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const TrainerShell()),
-        (route) => false,
-      );
+      await repo.saveWorkout(workout, user.id, user.name);
+
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Workout published successfully! Visible to all users.')),
+        );
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const TrainerShell()),
+              (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _publishing = false);
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to publish workout: $e')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final checklist = [
-      'Workout details & title (${widget.workout.title})',
-      'All exercises with step-by-step instructions (${widget.workout.exercises.length} exercise)',
-      'Supabase MP4 Video stream CDN link verified',
-      'Difficulty level (${widget.workout.level})',
-      'Target fitness goal (${widget.workout.goal})',
+    final checklist = const [
+      'Workout details',
+      'All exercises with instructions',
+      'Video uploads',
+      'Difficulty level',
+      'Target goal',
     ];
 
     return Scaffold(
@@ -72,7 +86,7 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
             child: Center(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(color: const Color(0x1F16A34A), borderRadius: BorderRadius.circular(999)),
+                decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
                 child: const Text('Ready to Launch', style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.w700)),
               ),
             ),
@@ -87,36 +101,16 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
                 padding: const EdgeInsets.all(20),
                 children: [
                   AppCard(
-                    padding: const EdgeInsets.all(14),
                     child: Row(
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            width: 56,
-                            height: 56,
-                            color: const Color(0xFFCCFBF1),
-                            child: const Icon(Icons.fitness_center, color: AppColors.brandTeal, size: 28),
-                          ),
-                        ),
+                        const SizedBox(width: 56, height: 56, child: EmptyOrPlaceholderImage(icon: Icons.fitness_center, height: 56)),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(widget.workout.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                              const SizedBox(height: 2),
-                              Text('Level: ${widget.workout.level} • ${widget.workout.durationMinutes} min', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                              if (widget.workout.videoUrl.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: const [
-                                    Icon(Icons.video_library, size: 12, color: AppColors.brandTeal),
-                                    SizedBox(width: 4),
-                                    Text('Supabase CDN Video Attached', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ],
+                              Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text('Level: ${widget.level} • ${widget.duration}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                             ],
                           ),
                         ),
@@ -129,7 +123,7 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
                       const Expanded(child: Text('Publishing Checklist', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: const Color(0x1F16A34A), borderRadius: BorderRadius.circular(999)),
+                        decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
                         child: Text('${checklist.length} of ${checklist.length} Verified',
                             style: const TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.w700)),
                       ),
@@ -137,26 +131,26 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
                   ),
                   const SizedBox(height: 12),
                   ...checklist.map((c) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle, color: AppColors.success, size: 20),
-                            const SizedBox(width: 10),
-                            Expanded(child: Text(c, style: const TextStyle(fontSize: 12))),
-                            const Text('100%', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                          ],
-                        ),
-                      )),
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(c)),
+                        const Text('100%', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  )),
                   const SizedBox(height: 8),
                   AppCard(
-                    color: const Color(0x0F0D9488),
+                    color: AppColors.brandTeal.withValues(alpha: 0.06),
                     child: const Row(
                       children: [
                         Icon(Icons.public, color: AppColors.brandTeal, size: 18),
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                              'Cross-Portal Distribution: Once published, this routine and video will be instantly accessible across Customer, Healthcare Advisor & Admin portals via Supabase DB.',
+                              'Public Catalog Distribution: once approved and published, this routine will be instantly accessible to all active FitPulse subscribers.',
                               style: TextStyle(fontSize: 11, color: AppColors.textPrimary)),
                         ),
                       ],
@@ -167,22 +161,19 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              child: _isSaving
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.brandTeal))
-                  : Column(
-                      children: [
-                        PrimaryButton(
-                          label: 'Publish Workout →',
-                          onPressed: () => _handleSaveWorkout('Published'),
-                        ),
-                        const SizedBox(height: 10),
-                        PrimaryButton(
-                          label: 'Submit for Clinical Review',
-                          outlined: true,
-                          onPressed: () => _handleSaveWorkout('Under Review'),
-                        ),
-                      ],
+              child: Column(
+                children: [
+                  if (_publishing)
+                    const CircularProgressIndicator()
+                  else
+                    PrimaryButton(
+                      label: 'Publish Workout',
+                      onPressed: () => _publishWorkout(context),
                     ),
+                  const SizedBox(height: 10),
+                  PrimaryButton(label: 'Save Draft', outlined: true, onPressed: () => Navigator.of(context).pop()),
+                ],
+              ),
             ),
           ],
         ),
