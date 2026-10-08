@@ -27,6 +27,14 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   }
 
   Future<void> _saveGuidance() async {
+    final user = context.read<AuthProvider>().currentUser;
+    if (user?.verificationStatus != 'approved') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Admin approval is required before you can publish clinical guidance.')),
+      );
+      return;
+    }
+
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
     if (title.isEmpty) {
@@ -39,7 +47,6 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
     setState(() => _saving = true);
 
     try {
-      final user = context.read<AuthProvider>().currentUser;
       final uid = user?.id ?? '';
       final authorName = user?.name ?? 'Healthcare Advisor';
 
@@ -74,6 +81,9 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final isApproved = user?.verificationStatus == 'approved';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -102,6 +112,28 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  if (!isApproved)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Account Pending Admin Approval: You can view your dashboard, but publishing clinical guidance is locked until the admin verifies your credentials.',
+                              style: TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
