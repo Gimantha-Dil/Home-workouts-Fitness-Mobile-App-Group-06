@@ -17,7 +17,7 @@ class ExerciseVideoPlayer extends StatefulWidget {
 }
 
 class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
-  late VideoPlayerController _controller;
+  VideoPlayerController? _controller;
   bool _initialized = false;
   bool _hasError = false;
 
@@ -27,23 +27,34 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
     _initializeVideo();
   }
 
-  void _initializeVideo() async {
+  Future<void> _initializeVideo() async {
+    setState(() {
+      _hasError = false;
+      _initialized = false;
+    });
+
     try {
+      if (_controller != null) {
+        await _controller!.dispose();
+      }
+
       _controller = VideoPlayerController.networkUrl(
         Uri.parse(widget.videoUrl),
       );
 
-      await _controller.initialize();
-      _controller.setLooping(true);
+      await _controller!.initialize();
+      _controller!.setLooping(true);
       if (mounted) {
         setState(() {
           _initialized = true;
+          _hasError = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _hasError = true;
+          _initialized = false;
         });
       }
     }
@@ -51,9 +62,7 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
 
   @override
   void dispose() {
-    if (_initialized) {
-      _controller.dispose();
-    }
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -68,13 +77,13 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
           color: Colors.black,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: _initialized
+        child: _initialized && _controller != null
             ? Stack(
                 alignment: Alignment.bottomCenter,
                 children: [
                   AspectRatio(
-                    aspectRatio: _controller.value.aspectRatio > 0 ? _controller.value.aspectRatio : 16 / 9,
-                    child: VideoPlayer(_controller),
+                    aspectRatio: _controller!.value.aspectRatio > 0 ? _controller!.value.aspectRatio : 16 / 9,
+                    child: VideoPlayer(_controller!),
                   ),
                   // Video Controls Overlay
                   Container(
@@ -91,13 +100,13 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
                       children: [
                         IconButton(
                           icon: Icon(
-                            _controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                            _controller!.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
                             color: Colors.white,
                             size: 36,
                           ),
                           onPressed: () {
                             setState(() {
-                              _controller.value.isPlaying ? _controller.pause() : _controller.play();
+                              _controller!.value.isPlaying ? _controller!.pause() : _controller!.play();
                             });
                           },
                         ),
@@ -107,13 +116,13 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
                         ),
                         IconButton(
                           icon: Icon(
-                            _controller.value.volume > 0 ? Icons.volume_up : Icons.volume_off,
+                            _controller!.value.volume > 0 ? Icons.volume_up : Icons.volume_off,
                             color: Colors.white,
                             size: 24,
                           ),
                           onPressed: () {
                             setState(() {
-                              _controller.setVolume(_controller.value.volume > 0 ? 0.0 : 1.0);
+                              _controller!.setVolume(_controller!.value.volume > 0 ? 0.0 : 1.0);
                             });
                           },
                         ),
@@ -127,10 +136,19 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.play_circle_outline, color: AppColors.brandTeal, size: 50),
+                        const Icon(Icons.error_outline, color: AppColors.danger, size: 40),
                         const SizedBox(height: 8),
-                        Text('MP4 Video Player Demo: ${widget.title}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                        const Text('HD 1080p Stream Ready', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                        const Text('Unable to load video stream', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: AppColors.brandTeal),
+                          ),
+                          onPressed: _initializeVideo,
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('Retry'),
+                        ),
                       ],
                     ),
                   )

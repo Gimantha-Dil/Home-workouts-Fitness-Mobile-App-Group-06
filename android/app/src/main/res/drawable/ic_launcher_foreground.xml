@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Heart Background glow -->
+    <path
+        android:fillColor="#14B8A6"
+        android:pathData="M54,34 C46,24 32,26 26,38 C18,52 38,72 54,82 C70,72 90,52 82,38 C76,26 62,24 54,34 Z"
+        android:fillAlpha="0.45" />
+
+    <!-- ECG Pulse Line -->
+    <path
+        android:strokeColor="#5EEAD4"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M24,54 L38,54 L44,40 L50,68 L58,34 L66,60 L70,54 L84,54" />
+
+    <!-- Pulse Dot Glow -->
+    <path
+        android:fillColor="#5EEAD4"
+        android:pathData="M 58, 34 m -3, 0 a 3,3 0 1,0 6,0 a 3,3 0 1,0 -6,0" />
+</vector>

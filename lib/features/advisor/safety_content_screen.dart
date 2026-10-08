@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'advisor_settings_screen.dart';
 import 'cooldown_guidance_screen.dart';
 import 'exercise_precautions_screen.dart';
 import 'health_considerations_screen.dart';
@@ -49,7 +50,12 @@ class _SafetyContentScreenState extends State<SafetyContentScreen> {
           ],
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AdvisorSettingsScreen()),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
@@ -99,7 +105,7 @@ class _SafetyContentScreenState extends State<SafetyContentScreen> {
                         onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen)),
                         child: Row(
                           children: [
-                            CircleAvatar(radius: 16, backgroundColor: color.withOpacity(0.12), child: Icon(icon, color: color, size: 18)),
+                            CircleAvatar(radius: 16, backgroundColor: color.withValues(alpha: 0.12), child: Icon(icon, color: color, size: 18)),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(

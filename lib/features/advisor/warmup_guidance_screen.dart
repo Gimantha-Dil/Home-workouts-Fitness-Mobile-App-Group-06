@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'advisor_settings_screen.dart';
 
 class WarmupGuidanceScreen extends StatelessWidget {
   const WarmupGuidanceScreen({super.key});
@@ -29,7 +31,12 @@ class WarmupGuidanceScreen extends StatelessWidget {
         ),
         title: const Text('Warm-Up Guide', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AdvisorSettingsScreen()),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
@@ -40,46 +47,51 @@ class WarmupGuidanceScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 children: [
                   // Hero Video Card
-                  Container(
-                    height: 180,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      height: 180,
+                      width: double.infinity,
                       color: Colors.black87,
-                      borderRadius: BorderRadius.circular(20),
-                      image: const DecorationImage(
-                        image: NetworkImage('https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop'),
-                        fit: BoxFit.cover,
-                        opacity: 0.65,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Opacity(
+                              opacity: 0.65,
+                              child: const AppNetworkImage(
+                                url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop',
+                                height: 180,
+                                width: double.infinity,
+                              ),
+                            ),
+                          ),
+                          const Center(
+                            child: CircleAvatar(
+                              radius: 26,
+                              backgroundColor: AppColors.brandTeal,
+                              child: Icon(Icons.play_arrow, color: Colors.white, size: 32),
+                            ),
+                          ),
+                          Positioned(
+                            top: 12,
+                            left: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                              child: const Text('FULL GUIDED RUN-THROUGH', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
+                              child: const Text('⏱ 2:45', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    child: Stack(
-                      children: [
-                        const Center(
-                          child: CircleAvatar(
-                            radius: 26,
-                            backgroundColor: AppColors.brandTeal,
-                            child: Icon(Icons.play_arrow, color: Colors.white, size: 32),
-                          ),
-                        ),
-                        Positioned(
-                          top: 12,
-                          left: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                            child: const Text('FULL GUIDED RUN-THROUGH', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 12,
-                          right: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(8)),
-                            child: const Text('⏱ 2:45', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -132,14 +144,11 @@ class WarmupGuidanceScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(12),
                         child: Row(
                           children: [
-                            ClipRRect(
+                            AppNetworkImage(
+                              url: img,
+                              width: 50,
+                              height: 50,
                               borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                width: 50,
-                                height: 50,
-                                color: Colors.grey.shade200,
-                                child: Image.network(img, fit: BoxFit.cover),
-                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -194,7 +203,7 @@ class _StatChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: color.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
       child: Column(
         children: [
           Text(label, style: const TextStyle(fontSize: 8, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),

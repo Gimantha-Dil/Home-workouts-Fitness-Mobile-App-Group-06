@@ -25,6 +25,8 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasVideo = widget.exercise.videoUrl != null && widget.exercise.videoUrl!.isNotEmpty;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -73,11 +75,32 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Real MP4 Exercise Video Streaming Player
-                  ExerciseVideoPlayer(
-                    videoUrl: 'https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4',
-                    title: widget.exercise.name,
-                  ),
+                  // Real MP4 Exercise Video Streaming Player or Placeholder
+                  if (hasVideo)
+                    ExerciseVideoPlayer(
+                      videoUrl: widget.exercise.videoUrl!,
+                      title: widget.exercise.name,
+                    )
+                  else
+                    Container(
+                      height: 180,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.videocam_off_outlined, color: AppColors.textSecondary, size: 40),
+                          const SizedBox(height: 8),
+                          Text(widget.exercise.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
+                          const SizedBox(height: 2),
+                          const Text('No video available yet', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                        ],
+                      ),
+                    ),
                   const SizedBox(height: 12),
 
                   // Lottie 60 FPS Exercise Motion Animation
@@ -122,35 +145,96 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Steps List
-                  ..._steps.asMap().entries.map((entry) {
-                    final i = entry.key + 1;
-                    final (title, desc) = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
+                  // Instructions Tab or Trainer Tips Tab
+                  if (_tab == 0) ...[
+                    if (widget.exercise.instructions.isNotEmpty)
+                      ...widget.exercise.instructions.asMap().entries.map((entry) {
+                        final i = entry.key + 1;
+                        final text = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: AppColors.brandTeal,
+                                child: Text('$i', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Step $i', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    const SizedBox(height: 2),
+                                    Text(text, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      })
+                    else
+                      ..._steps.asMap().entries.map((entry) {
+                        final i = entry.key + 1;
+                        final (title, desc) = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 12,
+                                backgroundColor: AppColors.brandTeal,
+                                child: Text('$i', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    const SizedBox(height: 2),
+                                    Text(desc, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                  ] else ...[
+                    // Trainer Tips tab
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF7ED),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFFEDD5)),
+                      ),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CircleAvatar(
-                            radius: 12,
-                            backgroundColor: AppColors.brandTeal,
-                            child: Text('$i', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                          Row(
+                            children: const [
+                              Icon(Icons.lightbulb_outline, color: Color(0xFFD97706), size: 18),
+                              SizedBox(width: 8),
+                              Text('Trainer Pro Tip', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFB45309), fontSize: 13)),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                const SizedBox(height: 2),
-                                Text(desc, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3)),
-                              ],
-                            ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.exercise.tip.isNotEmpty
+                                ? widget.exercise.tip
+                                : 'Keep your back straight, ribcage tucked, and engage your core throughout the movement to prevent lower back strain.',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF78350F), height: 1.4),
                           ),
                         ],
                       ),
-                    );
-                  }),
+                    ),
+                  ],
                   const SizedBox(height: 16),
 
                   // Physio Safety Advisory Card
@@ -258,7 +342,7 @@ class _MuscleChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
       child: Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color)),
     );
   }

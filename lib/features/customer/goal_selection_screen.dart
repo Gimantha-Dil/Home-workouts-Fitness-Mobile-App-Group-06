@@ -1,4 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'customer_shell.dart';
@@ -21,6 +25,23 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
     ('Increase Flexibility', '', 'Joint mobility, posture & stretch flow', Icons.self_improvement),
   ];
 
+  Future<void> _saveGoalsAndFinish() async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'goals': _selectedGoals.toList(),
+          'profileCompleted': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        if (mounted) {
+          await context.read<AuthProvider>().refreshUserFromFirestore(user);
+        }
+      } catch (_) {}
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,8 +63,8 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(20)),
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 Text('STEP 2 OF 3', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                 SizedBox(width: 4),
                 Text('Profile Setup', style: TextStyle(fontSize: 10, color: AppColors.brandTeal)),
@@ -92,7 +113,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
                         children: [
                           CircleAvatar(
                             radius: 18,
-                            backgroundColor: isSelected ? AppColors.brandTeal.withOpacity(0.12) : const Color(0xFFF3F4F6),
+                            backgroundColor: isSelected ? AppColors.brandTeal.withValues(alpha: 0.12) : const Color(0xFFF3F4F6),
                             child: Icon(icon, color: isSelected ? AppColors.brandTeal : AppColors.textSecondary, size: 20),
                           ),
                           const SizedBox(width: 12),
@@ -134,8 +155,8 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFBBF7D0)),
                 ),
-                child: Row(
-                  children: const [
+                child: const Row(
+                  children: [
                     Icon(Icons.verified, color: AppColors.brandTeal, size: 20),
                     SizedBox(width: 10),
                     Expanded(
@@ -155,11 +176,14 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
               const SizedBox(height: 24),
               PrimaryButton(
                 label: 'Continue →',
-                onPressed: () {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const CustomerShell()),
-                    (route) => false,
-                  );
+                onPressed: () async {
+                  await _saveGoalsAndFinish();
+                  if (context.mounted) {
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const CustomerShell()),
+                      (route) => false,
+                    );
+                  }
                 },
               ),
             ],

@@ -38,6 +38,12 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
     if (_step < 3) {
       setState(() => _step++);
     } else {
+      if (_exerciseNameController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Add at least one exercise before publishing.')),
+        );
+        return;
+      }
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => PublishWorkoutScreen(
@@ -215,7 +221,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.trainerPrimary.withOpacity(0.4), style: BorderStyle.solid),
+                  border: Border.all(color: AppColors.trainerPrimary.withValues(alpha: 0.4), style: BorderStyle.solid),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

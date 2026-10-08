@@ -3,6 +3,7 @@ import '../../core/models/workout_model.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'active_workout_screen.dart';
+import 'profile_screen.dart';
 
 class SafetyGuidanceScreen extends StatelessWidget {
   final Workout workout;
@@ -33,7 +34,12 @@ class SafetyGuidanceScreen extends StatelessWidget {
         ),
         title: const Text('Active Workout Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
@@ -89,7 +95,7 @@ class SafetyGuidanceScreen extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 16,
-                              backgroundColor: color.withOpacity(0.12),
+                              backgroundColor: color.withValues(alpha: 0.12),
                               child: Icon(icon, color: color, size: 18),
                             ),
                             const SizedBox(width: 12),
@@ -140,9 +146,17 @@ class SafetyGuidanceScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: PrimaryButton(
                 label: "Got it, Let's Workout! →",
-                onPressed: () => Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => ActiveWorkoutScreen(workout: workout)),
-                ),
+                onPressed: () {
+                  if (!workout.hasExercises) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('This workout has no exercises yet.')),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => ActiveWorkoutScreen(workout: workout)),
+                  );
+                },
               ),
             ),
           ],

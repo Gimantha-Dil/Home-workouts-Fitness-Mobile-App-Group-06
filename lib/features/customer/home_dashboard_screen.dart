@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/mock_data.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/history_provider.dart';
+import '../../core/providers/workout_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../../shared/widgets/stat_card.dart';
 import 'progress_dashboard_screen.dart';
@@ -11,13 +14,38 @@ import 'safety_guidance_screen.dart';
 import 'workout_details_screen.dart';
 import 'workout_history_screen.dart';
 
-class HomeDashboardScreen extends StatelessWidget {
+class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
+
+  @override
+  State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
+}
+
+class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final user = context.read<AuthProvider>().currentUser;
+        if (user != null) {
+          context.read<HistoryProvider>().listenToUserHistory(user.id);
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
-    final today = MockData.workouts.first;
+    final publishedWorkouts = context.watch<WorkoutProvider>().publishedWorkouts;
+    final historyProvider = context.watch<HistoryProvider>();
+
+    final today = publishedWorkouts.isNotEmpty ? publishedWorkouts.first : MockData.workouts.first;
+
+    final totalSessions = historyProvider.totalSessions;
+    final totalMinutes = (historyProvider.totalActiveHours * 60).round();
+    final streakDays = historyProvider.streakDays;
 
     final quickAccess = [
       ('Progress', 'Analytics', Icons.trending_up, AppColors.brandTeal, const ProgressDashboardScreen()),
@@ -41,9 +69,9 @@ class HomeDashboardScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(12)),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
+                        children: [
                           CircleAvatar(radius: 3, backgroundColor: AppColors.brandTeal),
                           SizedBox(width: 4),
                           Text('FITPULSE PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
@@ -51,7 +79,7 @@ class HomeDashboardScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text('Hello ${user?.name.split(' ').first ?? 'Nethmi'} 👋', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                    Text('Hello ${user?.name.split(' ').first ?? 'User'} 👋', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                     const Text('Keep going! You\'re doing great!', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                   ],
                 ),
@@ -86,14 +114,14 @@ class HomeDashboardScreen extends StatelessWidget {
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), borderRadius: BorderRadius.circular(20)),
+                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(20)),
                               child: const Text("TODAY'S WORKOUT", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                             ),
                             const SizedBox(height: 8),
                             Text(today.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
                             const SizedBox(height: 4),
                             Text('${today.durationMinutes} min • ${today.exercises.length} exercises\nDay 4 of 30 • Level 1',
-                                style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 11, height: 1.3)),
+                                style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11, height: 1.3)),
                             const SizedBox(height: 14),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
@@ -110,18 +138,11 @@ class HomeDashboardScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      ClipRRect(
+                      AppNetworkImage(
+                        url: today.imageUrl,
+                        width: 100,
+                        height: 110,
                         borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          width: 100,
-                          height: 110,
-                          color: Colors.black26,
-                          child: Image.network(
-                            'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: Colors.white, size: 40),
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -141,12 +162,12 @@ class HomeDashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Row(
-              children: const [
-                Expanded(child: StatCard(label: 'Workouts', value: '3', trailing: 'This Week', icon: Icons.fitness_center, color: AppColors.brandTeal)),
-                SizedBox(width: 8),
-                Expanded(child: StatCard(label: 'Minutes', value: '45', trailing: 'This Week', icon: Icons.timer_outlined, color: AppColors.info)),
-                SizedBox(width: 8),
-                Expanded(child: StatCard(label: 'Days', value: '12', trailing: 'Active Streak', icon: Icons.local_fire_department, color: AppColors.warning)),
+              children: [
+                Expanded(child: StatCard(label: 'Workouts', value: '$totalSessions', trailing: 'This Week', icon: Icons.fitness_center, color: AppColors.brandTeal)),
+                const SizedBox(width: 8),
+                Expanded(child: StatCard(label: 'Minutes', value: '$totalMinutes', trailing: 'This Week', icon: Icons.timer_outlined, color: AppColors.info)),
+                const SizedBox(width: 8),
+                Expanded(child: StatCard(label: 'Days', value: '$streakDays', trailing: 'Active Streak', icon: Icons.local_fire_department, color: AppColors.warning)),
               ],
             ),
             const SizedBox(height: 20),
@@ -167,7 +188,7 @@ class HomeDashboardScreen extends StatelessWidget {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: q.$4.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+                              decoration: BoxDecoration(color: q.$4.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
                               child: Icon(q.$3, color: q.$4, size: 18),
                             ),
                             const SizedBox(width: 8),
@@ -194,8 +215,8 @@ class HomeDashboardScreen extends StatelessWidget {
                 gradient: const LinearGradient(colors: [Color(0xFF0284C7), Color(0xFF0D9488)]),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   CircleAvatar(radius: 16, backgroundColor: Colors.white24, child: Icon(Icons.bolt, color: Colors.white, size: 18)),
                   SizedBox(width: 10),
                   Expanded(

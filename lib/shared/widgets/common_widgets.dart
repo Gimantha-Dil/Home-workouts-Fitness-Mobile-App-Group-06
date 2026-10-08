@@ -66,11 +66,47 @@ class PrimaryButton extends StatelessWidget {
     if (outlined) {
       return OutlinedButton(
         onPressed: onPressed,
-        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(50)),
-        child: Text(label),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(50),
+          side: const BorderSide(color: Color(0xFF00A896), width: 1.5),
+          foregroundColor: const Color(0xFF00A896),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
       );
     }
-    return ElevatedButton(onPressed: onPressed, child: Text(label));
+    return Container(
+      width: double.infinity,
+      height: 50,
+      decoration: BoxDecoration(
+        gradient: AppColors.buttonGradient,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00A896).withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onPressed,
+          child: Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -87,8 +123,8 @@ class EmptyOrPlaceholderImage extends StatelessWidget {
     return Container(
       height: height,
       width: double.infinity,
-      decoration: BoxDecoration(color: c.withOpacity(0.08), borderRadius: BorderRadius.circular(14)),
-      child: Icon(icon, size: 40, color: c.withOpacity(0.6)),
+      decoration: BoxDecoration(color: c.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(14)),
+      child: Icon(icon, size: 40, color: c.withValues(alpha: 0.6)),
     );
   }
 }
@@ -141,3 +177,51 @@ class NotificationIconButton extends StatelessWidget {
     );
   }
 }
+
+class AppLogoIcon extends StatelessWidget {
+  final double size;
+  const AppLogoIcon({super.key, this.size = 28});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF136E63), Color(0xFF053531)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(size * 0.3),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2DD4BF).withValues(alpha: 0.25),
+            blurRadius: size * 0.3,
+            offset: Offset(0, size * 0.08),
+          ),
+        ],
+        border: Border.all(
+          color: const Color(0xFF5EEAD4).withValues(alpha: 0.4),
+          width: 1.0,
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            Icons.favorite,
+            color: const Color(0xFF14B8A6).withValues(alpha: 0.45),
+            size: size * 0.65,
+          ),
+          Icon(
+            Icons.monitor_heart,
+            color: const Color(0xFF5EEAD4),
+            size: size * 0.55,
+          ),
+        ],
+      ),
+    );
+  }
+}
+

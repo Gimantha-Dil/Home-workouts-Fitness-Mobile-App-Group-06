@@ -60,7 +60,7 @@ class GuidanceDetailScreen extends StatelessWidget {
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: AppColors.danger.withOpacity(0.08), borderRadius: BorderRadius.circular(16)),
+                      decoration: BoxDecoration(color: AppColors.danger.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(16)),
                       child: Row(
                         children: [
                           Container(
@@ -93,7 +93,7 @@ class GuidanceDetailScreen extends StatelessWidget {
                     )),
                     const SizedBox(height: 8),
                     AppCard(
-                      color: AppColors.brandTeal.withOpacity(0.06),
+                      color: AppColors.brandTeal.withValues(alpha: 0.06),
                       child: const Row(
                         children: [
                           Icon(Icons.info_outline, color: AppColors.brandTeal, size: 18),

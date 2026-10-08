@@ -35,7 +35,7 @@ class CircularTimer extends StatelessWidget {
             child: CircularProgressIndicator(
               value: progress.clamp(0, 1),
               strokeWidth: 10,
-              backgroundColor: color.withOpacity(0.15),
+              backgroundColor: color.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
