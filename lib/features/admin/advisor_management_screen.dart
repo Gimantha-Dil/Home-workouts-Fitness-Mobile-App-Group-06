@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/screens/notification_center_screen.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -14,6 +15,8 @@ class AdvisorManagementScreen extends StatefulWidget {
 }
 
 class _AdvisorManagementScreenState extends State<AdvisorManagementScreen> {
+  String _statusFilter = 'All Status';
+
   void _showReviewDialog(BuildContext context, Map<String, dynamic> advisor) {
     final uid = advisor['id'] ?? advisor['uid'] ?? '';
     final name = advisor['name'] ?? 'Healthcare Advisor';
@@ -23,19 +26,73 @@ class _AdvisorManagementScreenState extends State<AdvisorManagementScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Clinical Credentials: $name', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Email: $email'),
-            const SizedBox(height: 4),
-            Text('User ID: $uid'),
-            const SizedBox(height: 4),
-            Text('Current Status: ${status.toUpperCase()}'),
-            const SizedBox(height: 12),
-            const Text('Medical Registration: SLMC Verified', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-          ],
+        title: Text('Credentials & Proof: $name', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: SizedBox(
+          width: 400,
+          child: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            future: FirebaseFirestore.instance.collection('verificationRequests').doc(uid).get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final data = snapshot.data?.data() ?? {};
+              final experience = data['experienceYears'] ?? data['specialization'] ?? 'Not provided';
+              final socialLink = data['socialLink'] ?? data['workplace'] ?? 'None';
+              final List<dynamic> docUrls = data['documentUrls'] ?? data['identityDocuments'] ?? [];
+
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Email: $email', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text('User ID: $uid', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    const SizedBox(height: 4),
+                    Text('Status: ${status.toUpperCase()}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: status == 'approved' ? AppColors.success : AppColors.warning)),
+                    const SizedBox(height: 14),
+                    const Text('SUBMITTED CREDENTIALS & PROOF:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                    const SizedBox(height: 6),
+                    Text('• Specialization / Experience: $experience', style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text('• Workplace / Link: $socialLink', style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 12),
+                    const Text('VERIFICATION DOCUMENTS (PROOF):', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                    const SizedBox(height: 6),
+                    if (docUrls.isEmpty)
+                      const Text('No uploaded proof documents found in request.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic))
+                    else
+                      ...docUrls.map((url) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: InkWell(
+                              onTap: () async {
+                                final uri = Uri.parse(url.toString());
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                }
+                              },
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.insert_drive_file, size: 16, color: AppColors.brandTeal),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      url.toString(),
+                                      style: const TextStyle(fontSize: 11, color: AppColors.info, decoration: TextDecoration.underline),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.open_in_new, size: 14, color: AppColors.info),
+                                ],
+                              ),
+                            ),
+                          )),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
         actions: [
           TextButton(
@@ -134,6 +191,15 @@ class _AdvisorManagementScreenState extends State<AdvisorManagementScreen> {
             final totalAdvisors = docs.length;
             final approvedAdvisors = docs.where((a) => a['verificationStatus'] == 'approved').length;
             final pendingAdvisors = docs.where((a) => a['verificationStatus'] == 'pending' || a['verificationStatus'] == 'none').length;
+            final rejectedAdvisors = docs.where((a) => a['verificationStatus'] == 'rejected').length;
+
+            var filtered = docs;
+            if (_statusFilter != 'All Status') {
+              filtered = filtered.where((a) {
+                final st = (a['verificationStatus'] ?? 'pending').toString().toLowerCase();
+                return st == _statusFilter.toLowerCase();
+              }).toList();
+            }
 
             return Column(
               children: [
@@ -145,36 +211,58 @@ class _AdvisorManagementScreenState extends State<AdvisorManagementScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Healthcare Advisors', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                          _Badge(text: '• $totalAdvisors Registered', color: AppColors.brandTeal),
+                          _Badge(text: '• $approvedAdvisors Active', color: AppColors.success),
                         ],
                       ),
                       const SizedBox(height: 2),
                       const Text('Manage health advisors, clinical credentials, and verification statuses in real-time.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       const SizedBox(height: 16),
 
-                      // Summary Badges
+                      // Summary Cards (Clickable Tabs)
                       Row(
                         children: [
-                          Expanded(child: _SummaryBox(title: 'APPROVED', value: '$approvedAdvisors', tag: 'Verified', color: AppColors.success)),
-                          const SizedBox(width: 8),
-                          Expanded(child: _SummaryBox(title: 'PENDING', value: '$pendingAdvisors', tag: 'Action Req', color: AppColors.warning)),
-                          const SizedBox(width: 8),
-                          Expanded(child: _SummaryBox(title: 'TOTAL', value: '$totalAdvisors', tag: 'Advisors', color: AppColors.info)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusFilter = 'All Status'),
+                              child: _SummaryBox(title: 'TOTAL', value: '$totalAdvisors', tag: 'Advisors', color: AppColors.brandTeal, isSelected: _statusFilter == 'All Status'),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusFilter = 'Approved'),
+                              child: _SummaryBox(title: 'APPROVED', value: '$approvedAdvisors', tag: 'Verified', color: AppColors.success, isSelected: _statusFilter == 'Approved'),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusFilter = 'Pending'),
+                              child: _SummaryBox(title: 'PENDING', value: '$pendingAdvisors', tag: 'Review', color: AppColors.warning, isSelected: _statusFilter == 'Pending'),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusFilter = 'Rejected'),
+                              child: _SummaryBox(title: 'REJECTED', value: '$rejectedAdvisors', tag: 'Closed', color: AppColors.danger, isSelected: _statusFilter == 'Rejected'),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
 
                       if (snapshot.connectionState == ConnectionState.waiting)
                         const Center(child: CircularProgressIndicator())
-                      else if (docs.isEmpty)
+                      else if (filtered.isEmpty)
                         const Center(
                           child: Padding(
                             padding: EdgeInsets.all(30),
-                            child: Text('No Healthcare Advisors registered yet in Firestore.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                            child: Text('No Healthcare Advisors found for this filter.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                           ),
                         )
                       else
-                        ...docs.map((a) {
+                        ...filtered.map((a) {
                           final name = a['name'] ?? 'Healthcare Advisor';
                           final email = a['email'] ?? '';
                           final uid = a['id'] ?? a['uid'] ?? '';
@@ -286,26 +374,26 @@ class _SummaryBox extends StatelessWidget {
   final String value;
   final String tag;
   final Color color;
+  final bool isSelected;
 
-  const _SummaryBox({required this.title, required this.value, required this.tag, required this.color});
+  const _SummaryBox({required this.title, required this.value, required this.tag, required this.color, this.isSelected = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isSelected ? 0.22 : 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isSelected ? color : Colors.transparent, width: 1.5),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color, letterSpacing: 0.5)),
+          Text(title, style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: color, letterSpacing: 0.5)),
           const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-              Text(tag, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color)),
-            ],
-          ),
+          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          Text(tag, style: TextStyle(fontSize: 8, color: color, fontWeight: FontWeight.bold)),
         ],
       ),
     );
