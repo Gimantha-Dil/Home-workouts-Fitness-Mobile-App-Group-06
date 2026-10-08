@@ -17,7 +17,7 @@ class NotificationService {
 
   /// Initialize Local Notifications and Timezone
   Future<void> init() async {
-    if (_initialized) return;
+    if (_initialized || kIsWeb) return;
 
     try {
       tz.initializeTimeZones();
@@ -39,19 +39,23 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _notificationsPlugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (response) {
-        debugPrint('Notification tapped: ${response.payload}');
-      },
-    );
-
-    _initialized = true;
-    debugPrint('🔔 NotificationService initialized successfully.');
+    try {
+      await _notificationsPlugin.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: (details) {
+          debugPrint('Notification clicked: ${details.payload}');
+        },
+      );
+      _initialized = true;
+      debugPrint('🔔 NotificationService Initialized Successfully');
+    } catch (e) {
+      debugPrint('Notification init exception: $e');
+    }
   }
 
-  /// Request POST_NOTIFICATIONS permission on Android 13+ / iOS
+  /// Request Notification Permissions
   Future<bool> requestPermission() async {
+    if (kIsWeb) return false;
     try {
       final androidImplementation = _notificationsPlugin
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -59,133 +63,143 @@ class NotificationService {
         final granted = await androidImplementation.requestNotificationsPermission();
         return granted ?? false;
       }
-
-      final iosImplementation = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-      if (iosImplementation != null) {
-        final granted = await iosImplementation.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-        return granted ?? false;
-      }
-      return true;
-    } catch (e) {
-      debugPrint('Permission request error: $e');
-      return false;
-    }
+    } catch (_) {}
+    return true;
   }
 
-  /// Schedule a weekly repeating reminder
+  /// Schedule a Weekly Repeating Workout Reminder
   Future<void> scheduleWeeklyReminder({
     required int id,
     required String title,
     required String body,
-    required int dayOfWeek, // 1 = Monday, 7 = Sunday
+    required int dayOfWeek, // 1 = Mon, 7 = Sun
     required int hour,
     required int minute,
     bool soundOn = true,
   }) async {
-    if (!_initialized) await init();
-
-    final channelId = soundOn ? channelSoundId : channelSilentId;
-    final channelName = soundOn ? 'Reminders (Sound On)' : 'Reminders (Silent)';
-
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-      channelName,
-      channelDescription: 'Scheduled workout reminders',
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: soundOn,
-    );
-
-    const iosDetails = DarwinNotificationDetails();
-
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    final scheduledDate = _nextInstanceOfDayAndTime(dayOfWeek, hour, minute);
+    if (kIsWeb || !_initialized) return;
 
     try {
+      final scheduledDate = _nextInstanceOfDayTime(dayOfWeek, hour, minute);
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          soundOn ? channelSoundId : channelSilentId,
+          soundOn ? 'Reminders with Sound' : 'Silent Reminders',
+          channelDescription: 'Scheduled workout reminder alerts',
+          importance: soundOn ? Importance.high : Importance.defaultImportance,
+          priority: soundOn ? Priority.high : Priority.defaultPriority,
+          playSound: soundOn,
+          enableVibration: soundOn,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: soundOn,
+        ),
+      );
+
       await _notificationsPlugin.zonedSchedule(
         id,
         title,
         body,
         scheduledDate,
         details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
+      debugPrint('⏰ Scheduled Reminder #$id for $title at ${scheduledDate.toString()}');
     } catch (e) {
-      debugPrint('Failed to schedule weekly reminder: $e');
+      debugPrint('Error scheduling reminder: $e');
     }
   }
 
-  /// Schedule daily streak alert at 20:00
-  Future<void> scheduleStreakAlert({
-    bool soundOn = true,
-    String title = 'Streak Alert!',
-    String body = 'Keep your streak going! Complete your workout for today.',
-  }) async {
-    if (!_initialized) await init();
-
-    const streakAlertId = 88888;
-    final channelId = soundOn ? channelSoundId : channelSilentId;
-
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-      'Streak Alerts',
-      channelDescription: 'Daily streak preservation alerts',
-      importance: Importance.high,
-      priority: Priority.high,
-      playSound: soundOn,
-    );
-
-    final scheduledDate = _nextInstanceOfTime(20, 0);
+  /// Schedule 2-Day Inactivity Nudge
+  Future<void> scheduleInactivityNudge() async {
+    if (kIsWeb || !_initialized) return;
 
     try {
+      final scheduledDate = tz.TZDateTime.now(tz.local).add(const Duration(days: 2));
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          channelSoundId,
+          'Reminders with Sound',
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      );
+
       await _notificationsPlugin.zonedSchedule(
-        streakAlertId,
-        title,
-        body,
+        99999,
+        'FitPulse: We miss your energy!',
+        'You\'ve been inactive for 2 days. A quick 10-minute session keeps your momentum alive!',
         scheduledDate,
-        NotificationDetails(android: androidDetails, iOS: const DarwinNotificationDetails()),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (_) {}
+  }
+
+  /// Schedule Daily Streak Alert
+  Future<void> scheduleStreakAlert({bool soundOn = true}) async {
+    if (kIsWeb || !_initialized) return;
+
+    try {
+      final now = tz.TZDateTime.now(tz.local);
+      var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, 20, 0); // 8:00 PM
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          soundOn ? channelSoundId : channelSilentId,
+          soundOn ? 'Reminders with Sound' : 'Silent Reminders',
+          importance: Importance.high,
+          priority: Priority.high,
+          playSound: soundOn,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: soundOn),
+      );
+
+      await _notificationsPlugin.zonedSchedule(
+        88888,
+        'FitPulse: Keep Your Streak Alive! 🔥',
+        'Complete today\'s quick routine before midnight to protect your active streak!',
+        scheduledDate,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
-    } catch (e) {
-      debugPrint('Failed to schedule streak alert: $e');
-    }
+    } catch (_) {}
   }
 
-  /// Cancel a specific notification
+  /// Cancel specific notification ID
   Future<void> cancel(int id) async {
-    await _notificationsPlugin.cancel(id);
+    if (kIsWeb || !_initialized) return;
+    try {
+      await _notificationsPlugin.cancel(id);
+    } catch (_) {}
   }
 
   /// Cancel all scheduled notifications
   Future<void> cancelAll() async {
-    await _notificationsPlugin.cancelAll();
+    if (kIsWeb || !_initialized) return;
+    try {
+      await _notificationsPlugin.cancelAll();
+    } catch (_) {}
   }
 
-  tz.TZDateTime _nextInstanceOfDayAndTime(int dayOfWeek, int hour, int minute) {
-    tz.TZDateTime scheduledDate = _nextInstanceOfTime(hour, minute);
-    while (scheduledDate.weekday != dayOfWeek) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-    return scheduledDate;
-  }
-
-  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
+  /// Helper to calculate the next occurrence of dayOfWeek and time
+  tz.TZDateTime _nextInstanceOfDayTime(int dayOfWeek, int hour, int minute) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    if (scheduledDate.isBefore(now)) {
+
+    while (scheduledDate.weekday != dayOfWeek || scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
     return scheduledDate;
