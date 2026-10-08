@@ -18,7 +18,7 @@ class CreateGuidanceScreen extends StatefulWidget {
 class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
-  String _category = 'Warm-up';
+  final _categoryController = TextEditingController(text: 'Warm-up');
   String _status = 'Draft';
   bool _saving = false;
   String? _uploadedImageUrl;
@@ -28,7 +28,31 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _categoryController.dispose();
     super.dispose();
+  }
+
+  void _applyFormatting(String wrapperBefore, [String? wrapperAfter]) {
+    final text = _contentController.text;
+    final selection = _contentController.selection;
+    final after = wrapperAfter ?? wrapperBefore;
+
+    if (selection.isValid && !selection.isCollapsed) {
+      final selectedText = selection.textInside(text);
+      final newText = text.replaceRange(selection.start, selection.end, '$wrapperBefore$selectedText$after');
+      _contentController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: selection.start + wrapperBefore.length + selectedText.length + after.length),
+      );
+    } else {
+      final offset = _contentController.selection.baseOffset;
+      final insertIndex = offset >= 0 ? offset : text.length;
+      final newText = text.replaceRange(insertIndex, insertIndex, '$wrapperBefore$after');
+      _contentController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: insertIndex + wrapperBefore.length),
+      );
+    }
   }
 
   Future<void> _pickImageFromGallery() async {
@@ -172,6 +196,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   Future<void> _saveGuidance([String? forcedStatus]) async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
+    final category = _categoryController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a guidance title.')),
@@ -192,7 +217,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
       await docRef.set({
         'id': docRef.id,
         'title': title,
-        'category': _category,
+        'category': category.isNotEmpty ? category : 'General Safety',
         'content': content,
         'imageUrl': _uploadedImageUrl ?? '',
         'status': savingStatus == 'Publish' ? 'Published' : 'Draft',
@@ -261,15 +286,37 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     decoration: const InputDecoration(hintText: 'e.g. Warm-up Guide'),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Category *', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                  const Text('Category * (Select from dropdown or type custom)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                   const SizedBox(height: 4),
-                  DropdownButtonFormField<String>(
-                    initialValue: _category,
-                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-                    items: const ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations']
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12))))
-                        .toList(),
-                    onChanged: (v) => setState(() => _category = v!),
+                  Autocomplete<String>(
+                    initialValue: TextEditingValue(text: _categoryController.text),
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      const options = ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations'];
+                      if (textEditingValue.text == '') {
+                        return options;
+                      }
+                      return options.where((String option) {
+                        return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                      });
+                    },
+                    onSelected: (String selection) {
+                      _categoryController.text = selection;
+                    },
+                    fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                      // Keep text synced
+                      controller.addListener(() {
+                        _categoryController.text = controller.text;
+                      });
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. Warm-up or custom category',
+                          suffixIcon: Icon(Icons.arrow_drop_down, size: 20),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   const Row(
@@ -280,24 +327,50 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Editor Toolbar
+                  // Editor Toolbar with working formatting options
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     decoration: const BoxDecoration(
                       color: Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.format_bold, size: 18, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Icon(Icons.format_italic, size: 18, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Icon(Icons.format_underlined, size: 18, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Icon(Icons.format_list_bulleted, size: 18, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Icon(Icons.format_quote, size: 18, color: AppColors.textSecondary),
+                        IconButton(
+                          icon: const Icon(Icons.format_bold, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Bold',
+                          onPressed: () => _applyFormatting('**'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_italic, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Italic',
+                          onPressed: () => _applyFormatting('*'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_underlined, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Underline',
+                          onPressed: () => _applyFormatting('<u>', '</u>'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_list_bulleted, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Bullet List',
+                          onPressed: () => _applyFormatting('- '),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_quote, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Quote / Blockquote',
+                          onPressed: () => _applyFormatting('> '),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_align_justify, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Justify Alignment',
+                          onPressed: () => _applyFormatting('<div align="justify">', '</div>'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_quote_rounded, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Double Quotes ("...")',
+                          onPressed: () => _applyFormatting('“', '”'),
+                        ),
                       ],
                     ),
                   ),
