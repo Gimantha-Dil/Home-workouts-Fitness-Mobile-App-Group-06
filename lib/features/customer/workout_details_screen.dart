@@ -1,13 +1,100 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../core/models/workout_model.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'exercise_details_screen.dart';
 import 'safety_guidance_screen.dart';
 
-class WorkoutDetailsScreen extends StatelessWidget {
+class WorkoutDetailsScreen extends StatefulWidget {
   final Workout workout;
   const WorkoutDetailsScreen({super.key, required this.workout});
+
+  @override
+  State<WorkoutDetailsScreen> createState() => _WorkoutDetailsScreenState();
+}
+
+class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
+  bool _isBookmarked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBookmarkStatus();
+  }
+
+  Future<void> _checkBookmarkStatus() async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final docSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('savedWorkouts')
+          .doc(widget.workout.id)
+          .get();
+      if (mounted) {
+        setState(() => _isBookmarked = docSnap.exists);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleBookmark() async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to save workouts.')),
+      );
+      return;
+    }
+
+    final docRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('savedWorkouts')
+        .doc(widget.workout.id);
+
+    try {
+      if (_isBookmarked) {
+        await docRef.delete();
+        if (mounted) {
+          setState(() => _isBookmarked = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Removed from saved workouts.')),
+          );
+        }
+      } else {
+        await docRef.set({
+          'workoutId': widget.workout.id,
+          'title': widget.workout.title,
+          'level': widget.workout.level,
+          'durationMinutes': widget.workout.durationMinutes,
+          'savedAt': FieldValue.serverTimestamp(),
+        });
+        if (mounted) {
+          setState(() => _isBookmarked = true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Workout saved to your collection!')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update bookmark: $e')),
+        );
+      }
+    }
+  }
+
+  void _shareWorkout() {
+    final title = widget.workout.title;
+    final level = widget.workout.level;
+    final duration = widget.workout.durationMinutes;
+    Share.share('$title - $level, $duration min | Check out this routine on FitPulse!');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,8 +113,17 @@ class WorkoutDetailsScreen extends StatelessWidget {
         ),
         title: const Text('Active Workout Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.bookmark_border), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: () {}),
+          IconButton(
+            icon: Icon(
+              _isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+              color: _isBookmarked ? AppColors.brandTeal : null,
+            ),
+            onPressed: _toggleBookmark,
+          ),
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            onPressed: _shareWorkout,
+          ),
         ],
       ),
       body: SafeArea(
@@ -46,7 +142,7 @@ class WorkoutDetailsScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(workout.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      Text(widget.workout.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(12)),
@@ -56,18 +152,18 @@ class WorkoutDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    workout.description.isEmpty
+                    widget.workout.description.isEmpty
                         ? 'A simple full-body workout designed for beginners to build foundational strength, mobility, and healthy habits.'
-                        : workout.description,
+                        : widget.workout.description,
                     style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
                   ),
                   const SizedBox(height: 16),
                   // Info Tags Row
                   Row(
                     children: [
-                      _infoTag(Icons.timer_outlined, 'Duration', '${workout.durationMinutes} min'),
+                      _infoTag(Icons.timer_outlined, 'Duration', '${widget.workout.durationMinutes} min'),
                       const SizedBox(width: 8),
-                      _infoTag(Icons.grid_view, 'Movements', '${workout.exercises.length} Drills'),
+                      _infoTag(Icons.grid_view, 'Movements', '${widget.workout.exercises.length} Drills'),
                       const SizedBox(width: 8),
                       _infoTag(Icons.fitness_center_outlined, 'Equipment', 'Bodyweight'),
                     ],
@@ -81,8 +177,8 @@ class WorkoutDetailsScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFFDE68A)),
                     ),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.tips_and_updates_outlined, color: AppColors.warning, size: 18),
                         SizedBox(width: 10),
                         Expanded(
@@ -99,11 +195,11 @@ class WorkoutDetailsScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Exercises', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('${workout.exercises.length} Total • 3 Sets Each', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      Text('${widget.workout.exercises.length} Total • 3 Sets Each', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  ...workout.exercises.asMap().entries.map((entry) {
+                  ...widget.workout.exercises.asMap().entries.map((entry) {
                     final i = entry.key + 1;
                     final e = entry.value;
                     return Padding(
@@ -114,7 +210,7 @@ class WorkoutDetailsScreen extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 12,
-                              backgroundColor: AppColors.brandTeal.withOpacity(0.12),
+                              backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12),
                               child: Text('$i', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                             ),
                             const SizedBox(width: 12),
@@ -158,8 +254,8 @@ class WorkoutDetailsScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Icon(Icons.verified, color: AppColors.brandTeal, size: 18),
                             SizedBox(width: 8),
                             Text('Doctor Verified Warm-up Recommended', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
@@ -172,7 +268,7 @@ class WorkoutDetailsScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         GestureDetector(
-                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SafetyGuidanceScreen(workout: workout))),
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SafetyGuidanceScreen(workout: widget.workout))),
                           child: const Text('Read Safety Guidance →', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                         ),
                       ],
@@ -184,8 +280,8 @@ class WorkoutDetailsScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(20),
               child: PrimaryButton(
-                label: 'Start Workout  •  ${workout.durationMinutes} min',
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SafetyGuidanceScreen(workout: workout))),
+                label: 'Start Workout  •  ${widget.workout.durationMinutes} min',
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SafetyGuidanceScreen(workout: widget.workout))),
               ),
             ),
           ],

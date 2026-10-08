@@ -1,14 +1,25 @@
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import '../../core/models/workout_model.dart';
+import '../../core/models/workout_session.dart';
+import '../../core/repositories/history_repository.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../../shared/widgets/stat_card.dart';
 import 'customer_shell.dart';
+import 'profile_screen.dart';
 import 'workout_details_screen.dart';
 
 class WorkoutCompletedScreen extends StatefulWidget {
   final Workout workout;
-  const WorkoutCompletedScreen({super.key, required this.workout});
+  final WorkoutSession? session;
+
+  const WorkoutCompletedScreen({
+    super.key,
+    required this.workout,
+    this.session,
+  });
 
   @override
   State<WorkoutCompletedScreen> createState() => _WorkoutCompletedScreenState();
@@ -16,9 +27,49 @@ class WorkoutCompletedScreen extends StatefulWidget {
 
 class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
   String _rating = 'Just Right';
+  bool _savedHistory = false;
+
+  int computeEstimatedCalories(int activeSeconds) {
+    if (activeSeconds <= 0) return 140;
+    return ((activeSeconds / 60.0) * 7.5).round();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _saveHistoryEntry();
+  }
+
+  Future<void> _saveHistoryEntry() async {
+    if (_savedHistory) return;
+    _savedHistory = true;
+
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final activeSecs = widget.session?.totalActiveDurationSeconds ?? (widget.workout.durationMinutes * 60);
+    final calories = computeEstimatedCalories(activeSecs);
+
+    try {
+      final repo = HistoryRepository();
+      await repo.addHistoryEntry(user.uid, {
+        'workoutId': widget.workout.id,
+        'title': widget.workout.title,
+        'durationSeconds': activeSecs,
+        'caloriesBurned': calories,
+        'exercisesCompleted': widget.session?.setResults.length ?? widget.workout.exercises.length,
+        'rating': _rating,
+      });
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
+    final activeSecs = widget.session?.totalActiveDurationSeconds ?? (widget.workout.durationMinutes * 60);
+    final minutesDone = (activeSecs / 60.0).round();
+    final caloriesDone = computeEstimatedCalories(activeSecs);
+    final exercisesDone = widget.session?.setResults.length ?? widget.workout.exercises.length;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -34,7 +85,12 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
         ),
         title: const Text('Workout Completed', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
@@ -44,10 +100,10 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
             Center(
               child: Column(
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 36,
-                    backgroundColor: const Color(0xFFCCFBF1),
-                    child: const Icon(Icons.emoji_events, color: AppColors.brandTeal, size: 40),
+                    backgroundColor: Color(0xFFCCFBF1),
+                    child: Icon(Icons.emoji_events, color: AppColors.brandTeal, size: 40),
                   ),
                   const SizedBox(height: 12),
                   Container(
@@ -65,11 +121,11 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(child: StatCard(label: 'Minutes', value: '${widget.workout.durationMinutes}', icon: Icons.timer_outlined, color: AppColors.info)),
+                Expanded(child: StatCard(label: 'Minutes', value: '$minutesDone', icon: Icons.timer_outlined, color: AppColors.info)),
                 const SizedBox(width: 8),
-                Expanded(child: StatCard(label: 'Exercises', value: '${widget.workout.exercises.length}', icon: Icons.fitness_center, color: AppColors.brandTeal)),
+                Expanded(child: StatCard(label: 'Sets Done', value: '$exercisesDone', icon: Icons.fitness_center, color: AppColors.brandTeal)),
                 const SizedBox(width: 8),
-                const Expanded(child: StatCard(label: 'Calories', value: '140', icon: Icons.local_fire_department, color: AppColors.warning)),
+                Expanded(child: StatCard(label: 'Calories', value: '$caloriesDone', icon: Icons.local_fire_department, color: AppColors.warning)),
               ],
             ),
             const SizedBox(height: 16),
@@ -77,8 +133,8 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFDE68A))),
-              child: Row(
-                children: const [
+              child: const Row(
+                children: [
                   Icon(Icons.local_fire_department, color: AppColors.warning, size: 22),
                   SizedBox(width: 10),
                   Expanded(
@@ -96,18 +152,11 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
             ),
             const SizedBox(height: 16),
             // Image Card
-            ClipRRect(
+            AppNetworkImage(
+              url: widget.workout.imageUrl,
+              height: 140,
+              width: double.infinity,
               borderRadius: BorderRadius.circular(16),
-              child: Container(
-                height: 140,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage('https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
             ),
             const SizedBox(height: 16),
             // Rating Feedback Card

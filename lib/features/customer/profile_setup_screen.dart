@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -16,8 +18,77 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String _heightUnit = 'cm';
   String _weightUnit = 'kg';
   String _fitnessLevel = 'Beginner';
-  final _heightController = TextEditingController(text: '175');
-  final _weightController = TextEditingController(text: '68');
+  final _heightController = TextEditingController(text: '160');
+  final _weightController = TextEditingController(text: '80');
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingProfile();
+  }
+
+  Future<void> _loadExistingProfile() async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final docSnap = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (docSnap.exists && docSnap.data() != null) {
+        final data = docSnap.data()!;
+        final profile = data['profile'] as Map<String, dynamic>?;
+
+        if (profile != null) {
+          final heightRaw = profile['height']?.toString() ?? '160 cm';
+          final weightRaw = profile['weight']?.toString() ?? '80 kg';
+
+          final heightParts = heightRaw.trim().split(' ');
+          final heightNum = heightParts.first;
+          final heightUnit = heightParts.length > 1 ? heightParts.last : 'cm';
+
+          final weightParts = weightRaw.trim().split(' ');
+          final weightNum = weightParts.first;
+          final weightUnit = weightParts.length > 1 ? weightParts.last : 'kg';
+
+          setState(() {
+            _ageRange = profile['ageRange']?.toString() ?? '18 - 25 years';
+            _gender = profile['gender']?.toString() ?? 'Male';
+            _fitnessLevel = profile['fitnessLevel']?.toString() ?? 'Beginner';
+            _heightUnit = heightUnit;
+            _weightUnit = weightUnit;
+            _heightController.text = heightNum;
+            _weightController.text = weightNum;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading existing profile biometrics: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _heightController.dispose();
+    _weightController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveProfileData() async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'profile': {
+            'ageRange': _ageRange,
+            'gender': _gender,
+            'height': '${_heightController.text.trim()} $_heightUnit',
+            'weight': '${_weightController.text.trim()} $_weightUnit',
+            'fitnessLevel': _fitnessLevel,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }
+        }, SetOptions(merge: true));
+      } catch (_) {}
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,14 +105,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             }
           },
         ),
-        title: const Text('Active Workout Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Profile Calibration', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(20)),
-            child: Row(
-              children: const [
+            child: const Row(
+              children: [
                 Text('STEP 1 OF 3', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                 SizedBox(width: 4),
                 Text('Profile Setup', style: TextStyle(fontSize: 10, color: AppColors.brandTeal)),
@@ -73,18 +144,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFCCFBF1)),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 20,
                       backgroundColor: AppColors.brandTeal,
                       child: Icon(Icons.person, color: Colors.white, size: 22),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           Text('PERSONALIZED METRICS', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal, letterSpacing: 0.5)),
                           SizedBox(height: 2),
                           Text('Baseline Calibration', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
@@ -97,19 +168,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 20),
               // Age Bracket
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text('Age Bracket', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   Text('Standard Safety Band', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                 ],
               ),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
-                initialValue: _ageRange,
-                decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  prefixIcon: const Icon(Icons.airline_seat_recline_normal, color: AppColors.brandTeal, size: 18),
+                value: _ageRange,
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  prefixIcon: Icon(Icons.airline_seat_recline_normal, color: AppColors.brandTeal, size: 18),
                 ),
                 items: const ['13 - 17 years', '18 - 25 years', '26 - 35 years', '36 - 45 years', '46+ years']
                     .map((o) => DropdownMenuItem(value: o, child: Text(o, style: const TextStyle(fontSize: 13))))
@@ -214,9 +285,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 20),
               // Baseline Fitness Level
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text('Baseline Fitness Level', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   Text('Select baseline', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                 ],
@@ -236,8 +307,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFBBF7D0)),
                 ),
-                child: Row(
-                  children: const [
+                child: const Row(
+                  children: [
                     Icon(Icons.verified_user, color: AppColors.brandTeal, size: 20),
                     SizedBox(width: 10),
                     Expanded(
@@ -257,8 +328,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               const SizedBox(height: 20),
               PrimaryButton(
                 label: 'Next →',
-                onPressed: () {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const GoalSelectionScreen()));
+                onPressed: () async {
+                  await _saveProfileData();
+                  if (context.mounted) {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const GoalSelectionScreen()),
+                    );
+                  }
                 },
               ),
               const SizedBox(height: 8),
@@ -302,7 +378,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           children: [
             CircleAvatar(
               radius: 16,
-              backgroundColor: active ? AppColors.brandTeal.withOpacity(0.1) : const Color(0xFFF3F4F6),
+              backgroundColor: active ? AppColors.brandTeal.withValues(alpha: 0.1) : const Color(0xFFF3F4F6),
               child: Icon(icon, size: 16, color: active ? AppColors.brandTeal : AppColors.textSecondary),
             ),
             const SizedBox(width: 12),

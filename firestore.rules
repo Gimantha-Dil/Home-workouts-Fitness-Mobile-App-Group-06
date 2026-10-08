@@ -1,0 +1,104 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'admin';
+    }
+
+    function isTrainer() {
+      return isSignedIn() && getUserData().role == 'trainer';
+    }
+
+    function isAdvisor() {
+      return isSignedIn() && getUserData().role == 'advisor';
+    }
+
+    // ------------------------------------------------------------------------
+    // Users Collection & Subcollections
+    // ------------------------------------------------------------------------
+    match /users/{uid} {
+      allow read: if isSignedIn() && (isOwner(uid) || isAdmin());
+
+      allow create: if isOwner(uid)
+                    && request.resource.data.role == 'customer'
+                    && request.resource.data.verificationStatus == 'none';
+
+      allow update: if (isOwner(uid) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoUrl']))
+                    || isAdmin();
+
+      allow delete: if isAdmin();
+
+      match /history/{historyId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /savedWorkouts/{workoutId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // Verification Requests Collection
+    // ------------------------------------------------------------------------
+    match /verificationRequests/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) && request.resource.data.status == 'pending';
+      allow update, delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // Workouts Collection
+    // ------------------------------------------------------------------------
+    match /workouts/{workoutId} {
+      allow read: if isSignedIn() && (
+        resource == null ||
+        resource.data.status == 'Published' ||
+        resource.data.createdBy == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow create: if (isTrainer() && request.resource.data.createdBy == request.auth.uid)
+                    || isAdmin();
+
+      allow update, delete: if (isTrainer() && resource.data.createdBy == request.auth.uid)
+                            || isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // Safety Content Collection
+    // ------------------------------------------------------------------------
+    match /safetyContent/{contentId} {
+      allow read: if isSignedIn() && (
+        resource == null ||
+        resource.data.status == 'Published' ||
+        isAdvisor() ||
+        isAdmin()
+      );
+
+      allow write: if isAdvisor() || isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // App Config / Settings Collection
+    // ------------------------------------------------------------------------
+    match /appConfig/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

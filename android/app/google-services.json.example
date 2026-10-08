@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "89236596610",
-    "project_id": "fitstart-32c6b",
-    "storage_bucket": "fitstart-32c6b.firebasestorage.app"
+    "project_number": "1234567890",
+    "project_id": "your-firebase-project-id",
+    "storage_bucket": "your-firebase-project-id.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:89236596610:android:0eb951d986647c031a119b",
+        "mobilesdk_app_id": "1:1234567890:android:abcdef123456",
         "android_client_info": {
           "package_name": "com.example.fitstart"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyD1vmA4WIwF1gF-Oq80UE106f3fMpc8ylY"
+          "current_key": "YOUR_FIREBASE_API_KEY"
         }
       ],
       "services": {

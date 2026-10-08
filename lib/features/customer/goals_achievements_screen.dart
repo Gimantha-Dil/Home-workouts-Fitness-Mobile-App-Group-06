@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'profile_screen.dart';
 
 class GoalsAchievementsScreen extends StatelessWidget {
   const GoalsAchievementsScreen({super.key});
@@ -22,7 +24,12 @@ class GoalsAchievementsScreen extends StatelessWidget {
         ),
         title: const Text('Active Workout Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
@@ -192,24 +199,30 @@ class GoalsAchievementsScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               child: Container(
                 height: 120,
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: NetworkImage('https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  color: Colors.black54,
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: const [
-                      Text('COACH TIP', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.amber)),
-                      SizedBox(height: 2),
-                      Text('"Consistency creates the baseline for peak breakthroughs."', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
-                    ],
-                  ),
+                color: Colors.black54,
+                child: Stack(
+                  children: [
+                    const Positioned.fill(
+                      child: AppNetworkImage(
+                        url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=800&auto=format&fit=crop',
+                        height: 120,
+                        width: double.infinity,
+                      ),
+                    ),
+                    Container(
+                      color: Colors.black54,
+                      padding: const EdgeInsets.all(14),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text('COACH TIP', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.amber)),
+                          SizedBox(height: 2),
+                          Text('"Consistency creates the baseline for peak breakthroughs."', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -237,7 +250,7 @@ class _BadgeCard extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: color.withOpacity(0.12),
+            backgroundColor: color.withValues(alpha: 0.12),
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(height: 8),

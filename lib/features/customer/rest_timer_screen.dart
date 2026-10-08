@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/models/workout_model.dart';
+import '../../core/models/workout_session.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/circular_timer.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'active_workout_screen.dart';
+import 'profile_screen.dart';
 
 class RestTimerScreen extends StatefulWidget {
   final Workout workout;
   final int nextExerciseIndex;
   final String nextExerciseName;
   final int restSeconds;
+  final WorkoutSession? session;
 
   const RestTimerScreen({
     super.key,
@@ -18,14 +22,16 @@ class RestTimerScreen extends StatefulWidget {
     required this.nextExerciseIndex,
     required this.nextExerciseName,
     required this.restSeconds,
+    this.session,
   });
 
   @override
   State<RestTimerScreen> createState() => _RestTimerScreenState();
 }
 
-class _RestTimerScreenState extends State<RestTimerScreen> {
+class _RestTimerScreenState extends State<RestTimerScreen> with WidgetsBindingObserver {
   late int _remaining = widget.restSeconds;
+  DateTime? _endAt;
   Timer? _timer;
   bool _continued = false;
   bool _paused = false;
@@ -33,23 +39,51 @@ class _RestTimerScreenState extends State<RestTimerScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startTimer();
   }
 
   void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (_paused) return;
-      if (_remaining <= 0) {
-        t.cancel();
+    _endAt = DateTime.now().add(Duration(seconds: _remaining));
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(milliseconds: 200), (t) {
+      if (_paused || _endAt == null) return;
+      final diff = _endAt!.difference(DateTime.now()).inSeconds;
+      if (diff <= 0) {
+        _timer?.cancel();
         _continue();
-        return;
+      } else {
+        if (diff != _remaining && mounted) {
+          setState(() => _remaining = diff);
+        }
       }
-      setState(() => _remaining--);
     });
+  }
+
+  void _pauseTimer() {
+    if (_paused) return;
+    setState(() => _paused = true);
+    _timer?.cancel();
+  }
+
+  void _resumeTimer() {
+    if (!_paused) return;
+    setState(() => _paused = false);
+    _startTimer();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _pauseTimer();
+    } else if (state == AppLifecycleState.resumed && !_paused) {
+      _resumeTimer();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     super.dispose();
   }
@@ -58,9 +92,22 @@ class _RestTimerScreenState extends State<RestTimerScreen> {
     if (!mounted || _continued) return;
     _continued = true;
     _timer?.cancel();
+
+    if (!widget.workout.hasExercises) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This workout has no exercises yet.')),
+      );
+      Navigator.of(context).pop();
+      return;
+    }
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => ActiveWorkoutScreen(workout: widget.workout, exerciseIndex: widget.nextExerciseIndex),
+        builder: (_) => ActiveWorkoutScreen(
+          workout: widget.workout,
+          exerciseIndex: widget.nextExerciseIndex,
+          session: widget.session,
+        ),
       ),
     );
   }
@@ -82,7 +129,12 @@ class _RestTimerScreenState extends State<RestTimerScreen> {
         ),
         title: const Text('Active Workout Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.person_outline), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
         ],
       ),
       body: SafeArea(
@@ -104,7 +156,7 @@ class _RestTimerScreenState extends State<RestTimerScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text('SET 2 COMPLETED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                  const Text('SET COMPLETED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
                   const SizedBox(height: 2),
                   const Text('Active Recovery', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                   const SizedBox(height: 4),
@@ -132,7 +184,10 @@ class _RestTimerScreenState extends State<RestTimerScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                         onPressed: () {
-                          if (_remaining >= 10) setState(() => _remaining -= 10);
+                          if (_remaining >= 10) {
+                            setState(() => _remaining -= 10);
+                            _endAt = DateTime.now().add(Duration(seconds: _remaining));
+                          }
                         },
                         child: const Text('-10s', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
@@ -143,7 +198,10 @@ class _RestTimerScreenState extends State<RestTimerScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        onPressed: () => setState(() => _remaining += 15),
+                        onPressed: () {
+                          setState(() => _remaining += 15);
+                          _endAt = DateTime.now().add(Duration(seconds: _remaining));
+                        },
                         child: const Text('+15s', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
                     ],
@@ -153,8 +211,8 @@ class _RestTimerScreenState extends State<RestTimerScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(12)),
-                    child: Row(
-                      children: const [
+                    child: const Row(
+                      children: [
                         Icon(Icons.air, color: AppColors.info, size: 20),
                         SizedBox(width: 10),
                         Expanded(
@@ -176,27 +234,20 @@ class _RestTimerScreenState extends State<RestTimerScreen> {
                     padding: const EdgeInsets.all(14),
                     child: Row(
                       children: [
-                        ClipRRect(
+                        AppNetworkImage(
+                          url: widget.workout.imageUrl,
+                          width: 50,
+                          height: 50,
                           borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            color: Colors.grey.shade200,
-                            child: Image.network(
-                              'https://images.unsplash.com/photo-1598971639058-fab3c3109a00?w=400&auto=format&fit=crop',
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: AppColors.brandTeal),
-                            ),
-                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: const [
-                                  Text('UP NEXT (3/6)', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                              const Row(
+                                children: [
+                                  Text('UP NEXT', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                                   SizedBox(width: 6),
                                   Text('• Lower Body Focus', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
                                 ],
@@ -221,7 +272,13 @@ class _RestTimerScreenState extends State<RestTimerScreen> {
                   PrimaryButton(label: 'Ready to Continue →', onPressed: _continue),
                   const SizedBox(height: 8),
                   TextButton(
-                    onPressed: () => setState(() => _paused = !_paused),
+                    onPressed: () {
+                      if (_paused) {
+                        _resumeTimer();
+                      } else {
+                        _pauseTimer();
+                      }
+                    },
                     child: Text(_paused ? 'Resume Rest' : 'Pause Rest', style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                   ),
                 ],
