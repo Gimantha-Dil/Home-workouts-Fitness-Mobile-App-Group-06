@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/workout_model.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -16,7 +16,6 @@ class TrainerDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
-    final uid = user?.id ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -40,7 +39,7 @@ class TrainerDashboardScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Good morning, ${user?.name.split(' ').first ?? 'Trainer'}!', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                const Text('Studio Overview • Live Firestore DB', style: TextStyle(fontSize: 9, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                const Text('Studio Overview • Live Supabase DB', style: TextStyle(fontSize: 9, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
               ],
             ),
           ],
@@ -50,17 +49,14 @@ class TrainerDashboardScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('workouts')
-              .where('createdBy', isEqualTo: uid)
-              .snapshots(),
+        child: StreamBuilder<List<Workout>>(
+          stream: SupabaseService.streamWorkoutsFromSupabase(),
           builder: (context, snapshot) {
-            final docs = snapshot.data?.docs.map((d) => Workout.fromMap({'id': d.id, ...d.data()})).toList() ?? [];
+            final docs = snapshot.data ?? [];
 
             final totalBuilt = docs.length;
-            final liveCatalog = docs.where((w) => w.status == 'Published').length;
-            final inReview = docs.where((w) => w.status == 'Under Review' || w.status == 'Draft').length;
+            final liveCatalog = docs.where((w) => w.isPublished).length;
+            final inReview = docs.where((w) => !w.isPublished).length;
 
             return ListView(
               padding: const EdgeInsets.all(20),
@@ -97,7 +93,7 @@ class TrainerDashboardScreen extends StatelessWidget {
                 // Stat Cards Row
                 Row(
                   children: [
-                    Expanded(child: _TrainerStatBox(value: '$totalBuilt', label: 'Total Built', tag: 'Live DB', icon: Icons.fitness_center, color: AppColors.brandTeal)),
+                    Expanded(child: _TrainerStatBox(value: '$totalBuilt', label: 'Total Built', tag: 'Supabase DB', icon: Icons.fitness_center, color: AppColors.brandTeal)),
                     const SizedBox(width: 8),
                     Expanded(child: _TrainerStatBox(value: '$liveCatalog', label: 'Live Catalog', tag: 'Published', icon: Icons.published_with_changes, color: AppColors.success)),
                     const SizedBox(width: 8),
@@ -181,18 +177,25 @@ class TrainerDashboardScreen extends StatelessWidget {
 
                 if (snapshot.connectionState == ConnectionState.waiting)
                   const Center(child: CircularProgressIndicator())
+                else if (snapshot.hasError)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text('Note loading Supabase data: ${snapshot.error}', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                    ),
+                  )
                 else if (docs.isEmpty)
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.all(30),
-                      child: Text('No workouts created yet. Tap "CREATE NEW WORKOUT" to get started!', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                      child: Text('No workouts found in Supabase DB. Tap "CREATE NEW WORKOUT" to get started!', textAlign: TextAlign.center, style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                     ),
                   )
                 else
                   ...docs.take(5).map((w) {
                     Color statusColor = AppColors.success;
-                    if (w.status == 'Draft') statusColor = AppColors.warning;
-                    if (w.status == 'Under Review') statusColor = AppColors.info;
+                    if (w.status.toLowerCase() == 'draft') statusColor = AppColors.warning;
+                    if (w.status.toLowerCase() == 'under review') statusColor = AppColors.info;
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -203,7 +206,7 @@ class TrainerDashboardScreen extends StatelessWidget {
                         w.status.toUpperCase(),
                         statusColor,
                         'Manage',
-                            () => Navigator.of(context).push(
+                        () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => EditWorkoutScreen(workout: w)),
                         ),
                       ),

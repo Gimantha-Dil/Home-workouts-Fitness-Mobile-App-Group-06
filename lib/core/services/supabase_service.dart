@@ -26,28 +26,55 @@ class SupabaseService {
     }
   }
 
-  /// 📤 Storage: Upload MP4 Exercise Video
+  /// 📤 Storage: Upload MP4 Exercise Video directly to exercise-videos bucket
   static Future<String> uploadExerciseVideo({
     required String fileName,
     required List<int> videoBytes,
   }) async {
     try {
-      if (isInitialized) {
+      if (!isInitialized) {
+        await initializeSupabase();
+      }
+
+      // Clean file name to prevent special character path issues in Supabase Storage
+      final cleanName = fileName.replaceAll(RegExp(r'[^a-zA-Z0-9_\-\.]'), '_');
+
+      // Upload directly to the root of 'exercise-videos' bucket with upsert enabled
+      await Supabase.instance.client.storage
+          .from('exercise-videos')
+          .uploadBinary(
+            cleanName,
+            Uint8List.fromList(videoBytes),
+            fileOptions: const FileOptions(upsert: true),
+          );
+
+      final publicUrl = Supabase.instance.client.storage
+          .from('exercise-videos')
+          .getPublicUrl(cleanName);
+
+      debugPrint('🎬 Uploaded Video directly to Supabase Storage bucket exercise-videos: $publicUrl');
+      return publicUrl;
+    } catch (e) {
+      debugPrint('🎬 Supabase Storage Upload Error: $e');
+      try {
+        final fallbackName = 'video_${DateTime.now().millisecondsSinceEpoch}.mp4';
         await Supabase.instance.client.storage
             .from('exercise-videos')
-            .uploadBinary('mp4/$fileName', Uint8List.fromList(videoBytes));
-
-        final publicUrl = Supabase.instance.client.storage
+            .uploadBinary(
+              fallbackName,
+              Uint8List.fromList(videoBytes),
+              fileOptions: const FileOptions(upsert: true),
+            );
+        final fallbackUrl = Supabase.instance.client.storage
             .from('exercise-videos')
-            .getPublicUrl('mp4/$fileName');
-
-        debugPrint('🎬 Uploaded MP4 Video to Supabase CDN: $publicUrl');
-        return publicUrl;
+            .getPublicUrl(fallbackName);
+        debugPrint('🎬 Uploaded Fallback Video to Supabase Storage: $fallbackUrl');
+        return fallbackUrl;
+      } catch (err) {
+        debugPrint('🎬 Supabase Storage Fallback Error: $err');
       }
-    } catch (e) {
-      debugPrint('🎬 Supabase Video Upload Note: $e');
     }
-    return '$supabaseUrl/storage/v1/object/public/exercise-videos/mp4/$fileName';
+    return '$supabaseUrl/storage/v1/object/public/exercise-videos/$fileName';
   }
 
   /// 📸 Storage: Upload User Profile Photo
@@ -117,7 +144,7 @@ class SupabaseService {
     return true;
   }
 
-  /// 🗄️ Database: Save Workout Record
+  /// 🗄️ Database: Save Workout Record to Supabase 'workouts' table
   static Future<bool> saveWorkoutToSupabase({
     Workout? workout,
     String? workoutId,
@@ -127,32 +154,91 @@ class SupabaseService {
     String? status,
     String? videoUrl,
   }) async {
-    final id = workout?.id ??
-        workoutId ??
-        DateTime.now().millisecondsSinceEpoch.toString();
-    final t = workout?.title ?? title ?? 'New Workout';
-    final l = workout?.level ?? level ?? 'Beginner';
-    final d = workout?.durationMinutes ?? durationMinutes ?? 20;
-    final s = workout?.status ?? status ?? 'Published';
-    final v = workout?.videoUrl ?? videoUrl ?? '';
+    if (!isInitialized) {
+      await initializeSupabase();
+    }
+
+    final rawId = (workout?.id != null && workout!.id.isNotEmpty)
+        ? workout.id
+        : (workoutId != null && workoutId.isNotEmpty ? workoutId : null);
+    final id = rawId ?? 'w_${DateTime.now().millisecondsSinceEpoch}';
+
+    final t = (workout?.title != null && workout!.title.isNotEmpty)
+        ? workout.title
+        : (title != null && title.isNotEmpty ? title : 'New Workout');
+
+    final l = (workout?.level != null && workout!.level.isNotEmpty)
+        ? workout.level
+        : (level != null && level.isNotEmpty ? level : 'Beginner');
+
+    final d = (workout != null && workout.durationMinutes > 0)
+        ? workout.durationMinutes
+        : (durationMinutes ?? 20);
+
+    final s = (workout?.status != null && workout!.status.isNotEmpty)
+        ? workout.status
+        : (status != null && status.isNotEmpty ? status : 'published');
+
+    final v = (workout?.videoUrl != null && workout!.videoUrl!.isNotEmpty)
+        ? workout.videoUrl!
+        : (videoUrl ?? '');
 
     try {
-      if (isInitialized) {
-        await Supabase.instance.client.from('workouts').upsert({
-          'id': id,
-          'title': t,
-          'level': l,
-          'duration_minutes': d,
-          'status': s,
-          'video_url': v,
-          'created_at': DateTime.now().toIso8601String(),
-        });
-        return true;
-      }
+      final record = {
+        'id': id,
+        'title': t,
+        'level': l,
+        'duration_minutes': d,
+        'status': s.toLowerCase(),
+        'video_url': v,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+
+      final response = await Supabase.instance.client
+          .from('workouts')
+          .upsert(record)
+          .select();
+
+      debugPrint('⚡ Saved workout "$t" (id: $id, video_url: $v) to Supabase Database table workouts! Response: $response');
+      return true;
     } catch (e) {
-      debugPrint('⚡ Supabase Workout Save Note: $e');
+      debugPrint('⚡ Supabase Workout Save Error: $e');
     }
     return true;
+  }
+
+  /// 🗄️ Database: Fetch all workouts from Supabase workouts table
+  static Future<List<Workout>> fetchWorkoutsFromSupabase() async {
+    try {
+      if (isInitialized) {
+        final List<dynamic> data = await Supabase.instance.client
+            .from('workouts')
+            .select()
+            .order('created_at', ascending: false);
+
+        debugPrint('⚡ Fetched ${data.length} records from Supabase workouts table');
+        return data.map((map) => Workout.fromMap(Map<String, dynamic>.from(map))).toList();
+      }
+    } catch (e) {
+      debugPrint('⚡ Supabase Fetch Workouts Note: $e');
+    }
+    return [];
+  }
+
+  /// 🗄️ Database: Realtime stream of workouts from Supabase
+  static Stream<List<Workout>> streamWorkoutsFromSupabase() {
+    try {
+      if (isInitialized) {
+        return Supabase.instance.client
+            .from('workouts')
+            .stream(primaryKey: ['id'])
+            .order('created_at', ascending: false)
+            .map((list) => list.map((map) => Workout.fromMap(map)).toList());
+      }
+    } catch (e) {
+      debugPrint('⚡ Supabase Stream Workouts Note: $e');
+    }
+    return Stream.value([]);
   }
 
   /// 🗄️ Database: Update Workout Status
