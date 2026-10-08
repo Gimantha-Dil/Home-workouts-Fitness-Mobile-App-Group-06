@@ -169,7 +169,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
     );
   }
 
-  Future<void> _saveGuidance() async {
+  Future<void> _saveGuidance([String? forcedStatus]) async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
     if (title.isEmpty) {
@@ -178,6 +178,8 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
       );
       return;
     }
+
+    final savingStatus = forcedStatus ?? _status;
 
     setState(() => _saving = true);
 
@@ -193,7 +195,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
         'category': _category,
         'content': content,
         'imageUrl': _uploadedImageUrl ?? '',
-        'status': _status == 'Publish' ? 'Published' : 'Draft',
+        'status': savingStatus == 'Publish' ? 'Published' : 'Draft',
         'createdBy': uid,
         'authorName': authorName,
         'createdAt': FieldValue.serverTimestamp(),
@@ -201,7 +203,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Guidance "$title" saved successfully in Firestore!')),
+          SnackBar(content: Text('Safety guidance saved as ${savingStatus == 'Publish' ? 'Published' : 'Draft'} successfully!')),
         );
         Navigator.of(context).pop();
       }
@@ -393,7 +395,10 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _status = 'Draft'),
+                          onTap: () {
+                            setState(() => _status = 'Draft');
+                            _saveGuidance('Draft');
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             alignment: Alignment.center,
@@ -409,7 +414,10 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _status = 'Publish'),
+                          onTap: () {
+                            setState(() => _status = 'Publish');
+                            _saveGuidance('Publish');
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             alignment: Alignment.center,
@@ -436,7 +444,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                   else
                     PrimaryButton(
                       label: 'Save Guidance →',
-                      onPressed: _saveGuidance,
+                      onPressed: () => _saveGuidance(),
                     ),
                   const SizedBox(height: 8),
                   TextButton(
@@ -460,7 +468,6 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    textStyle: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
