@@ -7,7 +7,7 @@ class Exercise {
   final String difficulty;
   final List<String> instructions;
   final String tip;
-  final String videoUrl;
+  final String? videoUrl;
 
   const Exercise({
     required this.id,
@@ -18,10 +18,10 @@ class Exercise {
     this.difficulty = 'Beginner',
     this.instructions = const [],
     this.tip = '',
-    this.videoUrl = '',
+    this.videoUrl,
   });
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
@@ -35,19 +35,17 @@ class Exercise {
     };
   }
 
-  factory Exercise.fromJson(Map<String, dynamic> json) {
+  factory Exercise.fromMap(Map<String, dynamic> map) {
     return Exercise(
-      id: json['id'] ?? 'e_0',
-      name: json['name'] ?? 'Exercise',
-      sets: json['sets'] ?? 3,
-      reps: json['reps'] ?? 10,
-      restSeconds: json['restSeconds'] ?? json['rest_seconds'] ?? 45,
-      difficulty: json['difficulty'] ?? 'Beginner',
-      instructions: json['instructions'] != null
-          ? List<String>.from(json['instructions'])
-          : const [],
-      tip: json['tip'] ?? '',
-      videoUrl: json['videoUrl'] ?? json['video_url'] ?? '',
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      sets: map['sets'] ?? 3,
+      reps: map['reps'] ?? 10,
+      restSeconds: map['restSeconds'] ?? 30,
+      difficulty: map['difficulty'] ?? 'Beginner',
+      instructions: List<String>.from(map['instructions'] ?? []),
+      tip: map['tip'] ?? '',
+      videoUrl: map['videoUrl'],
     );
   }
 }
@@ -61,9 +59,11 @@ class Workout {
   final String goal;
   final String status;
   final String imageUrl;
-  final String videoUrl;
-  final String reviewerNote;
   final List<Exercise> exercises;
+
+  bool get hasExercises => exercises.isNotEmpty;
+
+  Exercise? exerciseAt(int i) => (i >= 0 && i < exercises.length) ? exercises[i] : null;
 
   const Workout({
     required this.id,
@@ -74,48 +74,44 @@ class Workout {
     this.goal = 'General Fitness',
     this.status = 'Draft',
     this.imageUrl = 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
-    this.videoUrl = '',
-    this.reviewerNote = '',
     this.exercises = const [],
   });
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
       'description': description,
       'level': level,
-      'duration_minutes': durationMinutes,
+      'durationMinutes': durationMinutes,
       'goal': goal,
       'status': status,
-      'image_url': imageUrl,
-      'video_url': videoUrl,
-      'reviewer_note': reviewerNote,
-      'exercises': exercises.map((e) => e.toJson()).toList(),
+      'imageUrl': imageUrl,
+      'exercises': exercises.map((e) => e.toMap()).toList(),
     };
   }
 
-  factory Workout.fromJson(Map<String, dynamic> json) {
-    List<Exercise> exList = [];
-    if (json['exercises'] != null) {
-      if (json['exercises'] is List) {
-        exList = (json['exercises'] as List)
-            .map((e) => Exercise.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
+  factory Workout.fromMap(Map<String, dynamic> map) {
+    final list = <Exercise>[];
+    if (map['exercises'] is List) {
+      for (final e in map['exercises'] as List) {
+        if (e is Map) {
+          try {
+            list.add(Exercise.fromMap(Map<String, dynamic>.from(e)));
+          } catch (_) {}
+        }
       }
     }
     return Workout(
-      id: json['id'] ?? 'w_0',
-      title: json['title'] ?? 'Workout',
-      description: json['description'] ?? '',
-      level: json['level'] ?? 'Beginner',
-      durationMinutes: json['duration_minutes'] ?? json['duration'] ?? 20,
-      goal: json['goal'] ?? 'General Fitness',
-      status: json['status'] ?? 'Draft',
-      imageUrl: json['image_url'] ?? json['imageUrl'] ?? 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
-      videoUrl: json['video_url'] ?? json['videoUrl'] ?? '',
-      reviewerNote: json['reviewer_note'] ?? json['reviewerNote'] ?? '',
-      exercises: exList,
+      id: map['id'] ?? '',
+      title: map['title'] ?? '',
+      description: map['description'] ?? '',
+      level: map['level'] ?? 'Beginner',
+      durationMinutes: map['durationMinutes'] ?? 15,
+      goal: map['goal'] ?? 'General Fitness',
+      status: map['status'] ?? 'Draft',
+      imageUrl: map['imageUrl'] ?? 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
+      exercises: list,
     );
   }
 }

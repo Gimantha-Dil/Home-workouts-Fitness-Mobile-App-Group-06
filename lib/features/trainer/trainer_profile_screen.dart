@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../main.dart';
+import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'trainer_settings_screen.dart';
+import 'trainer_shell.dart';
 
 class TrainerProfileScreen extends StatelessWidget {
   const TrainerProfileScreen({super.key});
@@ -22,6 +25,10 @@ class TrainerProfileScreen extends StatelessWidget {
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const TrainerShell()),
+              );
             }
           },
         ),
@@ -43,9 +50,15 @@ class TrainerProfileScreen extends StatelessWidget {
                   Stack(
                     alignment: Alignment.bottomRight,
                     children: [
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 40,
-                        backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop'),
+                        child: ClipOval(
+                          child: AppNetworkImage(
+                            url: null,
+                            width: 80,
+                            height: 80,
+                          ),
+                        ),
                       ),
                       Container(
                         padding: const EdgeInsets.all(4),
@@ -55,7 +68,7 @@ class TrainerProfileScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Text(user?.name ?? 'Alex Carter', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(user?.name ?? 'Fitness Trainer', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 6,
@@ -82,59 +95,9 @@ class TrainerProfileScreen extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         side: const BorderSide(color: AppColors.brandTeal),
                       ),
-                      onPressed: () {
-                        final nameCtrl = TextEditingController(text: user?.name ?? 'Alex Carter');
-                        final bioCtrl = TextEditingController(
-                          text: 'Certified Fitness Trainer & Kinesiologist with 5+ years experience in functional mobility & strength.',
-                        );
-
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                          ),
-                          builder: (ctx) => Padding(
-                            padding: EdgeInsets.only(
-                              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-                              top: 20,
-                              left: 20,
-                              right: 20,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Edit Trainer Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                const SizedBox(height: 12),
-                                TextField(
-                                  controller: nameCtrl,
-                                  decoration: const InputDecoration(labelText: 'Display Name', prefixIcon: Icon(Icons.person)),
-                                ),
-                                const SizedBox(height: 10),
-                                TextField(
-                                  controller: bioCtrl,
-                                  maxLines: 3,
-                                  decoration: const InputDecoration(labelText: 'Professional Bio', prefixIcon: Icon(Icons.info_outline)),
-                                ),
-                                const SizedBox(height: 16),
-                                PrimaryButton(
-                                  label: 'Save Profile Changes ✓',
-                                  onPressed: () {
-                                    Navigator.of(ctx).pop();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('⚡ Profile changes saved to Supabase!'),
-                                        backgroundColor: AppColors.brandTeal,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const TrainerSettingsScreen()),
+                      ),
                       child: const Text('Edit Profile ✏', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                     ),
                   ),
@@ -177,9 +140,9 @@ class TrainerProfileScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            _certTile(context, 'ACE Certified Personal Trainer', 'American Council on Exercise • Valid thru 2026'),
+            _certTile('ACE Certified Personal Trainer', 'American Council on Exercise • Valid thru 2026'),
             const SizedBox(height: 8),
-            _certTile(context, 'NASM Corrective Exercise Special', 'National Academy of Sports Medicine'),
+            _certTile('NASM Corrective Exercise Special', 'National Academy of Sports Medicine'),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -189,15 +152,23 @@ class TrainerProfileScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            _moduleTile(context, 'Core Foundations A1', '8 exercises • Week 1-2'),
+            _moduleTile('Core Foundations A1', '8 exercises • Week 1-2'),
             const SizedBox(height: 8),
-            _moduleTile(context, 'Dynamic Mobility Block', '5 exercises • Daily Routine'),
+            _moduleTile('Dynamic Mobility Block', '5 exercises • Daily Routine'),
             const SizedBox(height: 8),
-            _moduleTile(context, 'Upper Body Hypertrophy I', '6 exercises • Week 3-4'),
+            _moduleTile('Upper Body Hypertrophy I', '6 exercises • Week 3-4'),
             const SizedBox(height: 20),
             Center(
               child: TextButton(
-                onPressed: () => context.read<AuthProvider>().logout(),
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  final auth = context.read<AuthProvider>();
+                  await auth.logout();
+                  navigator.pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AppRoot()),
+                        (route) => false,
+                  );
+                },
                 child: const Text('Sign Out of FitPulse', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
               ),
             ),
@@ -207,24 +178,9 @@ class TrainerProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _certTile(BuildContext context, String title, String sub) {
+  Widget _certTile(String title, String sub) {
     return AppCard(
       padding: const EdgeInsets.all(12),
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            content: Text('$sub\n\nVerified active status in Supabase Credentials Registry.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('OK', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
-      },
       child: Row(
         children: [
           const CircleAvatar(radius: 14, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.verified, color: AppColors.brandTeal, size: 16)),
@@ -244,24 +200,9 @@ class TrainerProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _moduleTile(BuildContext context, String title, String sub) {
+  Widget _moduleTile(String title, String sub) {
     return AppCard(
       padding: const EdgeInsets.all(12),
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-            content: Text('$sub\n\nAssigned coaching curriculum module for active subscribers.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('OK', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
-      },
       child: Row(
         children: [
           ClipRRect(
@@ -294,7 +235,7 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
       child: Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color)),
     );
   }
