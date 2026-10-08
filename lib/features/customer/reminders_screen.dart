@@ -43,15 +43,53 @@ class _RemindersScreenState extends State<RemindersScreen> {
   bool _motiSwitch = true;
 
   final List<ReminderItem> _reminders = [
-    ReminderItem(id: 101, title: 'Morning Workout', badge: 'HIGH INTENSITY', subtitle: '07:00 AM • Daily • Push & Core', icon: Icons.wb_sunny_outlined, color: AppColors.warning, hour: 7, minute: 0),
-    ReminderItem(id: 102, title: 'Evening Stretch', badge: 'RECOVERY', subtitle: '06:30 PM • Mon, Wed, Fri', icon: Icons.nightlight_round_outlined, color: AppColors.info, hour: 18, minute: 30),
-    ReminderItem(id: 103, title: 'Weekend Cardio', badge: 'AEROBIC', subtitle: '09:00 AM • Sat, Sun • Outdoor', icon: Icons.directions_run_outlined, color: AppColors.brandTeal, enabled: false, hour: 9, minute: 0),
+    ReminderItem(id: 101, title: 'Morning Workout', badge: 'HIGH INTENSITY', subtitle: '07:00 AM • Daily', icon: Icons.wb_sunny_outlined, color: AppColors.warning, hour: 7, minute: 0),
+    ReminderItem(id: 102, title: 'Evening Stretch', badge: 'RECOVERY', subtitle: '06:30 PM • Daily', icon: Icons.nightlight_round_outlined, color: AppColors.info, hour: 18, minute: 30),
   ];
 
   @override
   void initState() {
     super.initState();
-    _syncRemindersWithService();
+    _loadSavedReminders();
+  }
+
+  Future<void> _loadSavedReminders() async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final docSnap = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (docSnap.exists && docSnap.data() != null) {
+        final data = docSnap.data()!;
+        final savedList = data['reminders'] as List<dynamic>?;
+        if (data.containsKey('masterReminders')) {
+          _masterSwitch = data['masterReminders'] ?? true;
+        }
+
+        if (savedList != null && savedList.isNotEmpty) {
+          final loaded = savedList.map((item) {
+            final map = Map<String, dynamic>.from(item);
+            return ReminderItem(
+              id: map['id'] ?? (DateTime.now().millisecondsSinceEpoch % 10000),
+              title: map['title'] ?? 'Workout Reminder',
+              badge: map['badge'] ?? 'MODERATE',
+              subtitle: map['subtitle'] ?? '08:00 AM • Daily',
+              icon: Icons.notifications_active_outlined,
+              color: AppColors.brandTeal,
+              enabled: map['enabled'] ?? true,
+              hour: map['hour'] ?? 8,
+              minute: map['minute'] ?? 0,
+            );
+          }).toList();
+
+          setState(() {
+            _reminders.clear();
+            _reminders.addAll(loaded);
+          });
+        }
+      }
+    } catch (_) {}
+    await _syncRemindersWithService();
   }
 
   Future<void> _syncRemindersWithService() async {
@@ -62,7 +100,6 @@ class _RemindersScreenState extends State<RemindersScreen> {
 
     for (final r in _reminders) {
       if (r.enabled) {
-        // Schedule daily or weekly repeating notification
         for (int day = 1; day <= 7; day++) {
           await NotificationService().scheduleWeeklyReminder(
             id: r.id * 10 + day,
@@ -108,27 +145,36 @@ class _RemindersScreenState extends State<RemindersScreen> {
     } catch (_) {}
   }
 
-  void _openAddReminderDialog() {
+  void _openAddReminderDialog() async {
     final titleCtrl = TextEditingController();
-    final timeCtrl = TextEditingController(text: '08:00 AM');
+    TimeOfDay selectedTime = const TimeOfDay(hour: 8, minute: 0);
     String intensity = 'MODERATE';
 
-    showDialog(
+    await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Add Custom Reminder', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
                 controller: titleCtrl,
                 decoration: const InputDecoration(labelText: 'Reminder Title (e.g. Core Workout)', prefixIcon: Icon(Icons.fitness_center)),
               ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: timeCtrl,
-                decoration: const InputDecoration(labelText: 'Time (e.g. 08:00 AM)', prefixIcon: Icon(Icons.access_time)),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.access_time, color: AppColors.brandTeal),
+                title: Text('Time: ${selectedTime.format(context)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                trailing: const Text('Change', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                onTap: () async {
+                  final picked = await showTimePicker(context: context, initialTime: selectedTime);
+                  if (picked != null) {
+                    setDialogState(() => selectedTime = picked);
+                  }
+                },
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -150,18 +196,18 @@ class _RemindersScreenState extends State<RemindersScreen> {
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
               onPressed: () async {
                 final title = titleCtrl.text.trim();
-                final timeStr = timeCtrl.text.trim();
                 if (title.isNotEmpty) {
+                  final formattedTime = selectedTime.format(context);
                   final newId = DateTime.now().millisecondsSinceEpoch % 10000;
                   final newItem = ReminderItem(
                     id: newId,
                     title: title,
                     badge: intensity,
-                    subtitle: '$timeStr • Daily',
+                    subtitle: '$formattedTime • Daily',
                     icon: Icons.notifications_active_outlined,
                     color: AppColors.brandTeal,
-                    hour: 8,
-                    minute: 0,
+                    hour: selectedTime.hour,
+                    minute: selectedTime.minute,
                   );
 
                   setState(() {
@@ -171,8 +217,8 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   await _syncRemindersWithService();
                   await _saveRemindersToFirestore();
 
+                  if (ctx.mounted) Navigator.of(ctx).pop();
                   if (context.mounted) {
-                    Navigator.of(ctx).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Reminder "$title" added successfully!')),
                     );
@@ -180,6 +226,100 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 }
               },
               child: const Text('Save Reminder', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openEditReminderDialog(ReminderItem r) async {
+    final titleCtrl = TextEditingController(text: r.title);
+    TimeOfDay selectedTime = TimeOfDay(hour: r.hour, minute: r.minute);
+    String intensity = r.badge;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Edit "${r.title}"', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(labelText: 'Title', prefixIcon: Icon(Icons.fitness_center)),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.access_time, color: AppColors.brandTeal),
+                title: Text('Time: ${selectedTime.format(context)}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                trailing: const Text('Change', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                onTap: () async {
+                  final picked = await showTimePicker(context: context, initialTime: selectedTime);
+                  if (picked != null) {
+                    setDialogState(() => selectedTime = picked);
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: intensity,
+                decoration: const InputDecoration(labelText: 'Intensity', contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                items: const ['HIGH INTENSITY', 'MODERATE', 'RECOVERY', 'AEROBIC']
+                    .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+                    .toList(),
+                onChanged: (v) => setDialogState(() => intensity = v!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                // Delete Reminder Action
+                setState(() {
+                  _reminders.removeWhere((item) => item.id == r.id);
+                });
+                await _syncRemindersWithService();
+                await _saveRemindersToFirestore();
+
+                if (ctx.mounted) Navigator.of(ctx).pop();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Reminder "${r.title}" deleted.')),
+                  );
+                }
+              },
+              child: const Text('Delete', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+              onPressed: () async {
+                final newTitle = titleCtrl.text.trim();
+                if (newTitle.isNotEmpty) {
+                  final formattedTime = selectedTime.format(context);
+                  setState(() {
+                    r.title = newTitle;
+                    r.badge = intensity;
+                    r.hour = selectedTime.hour;
+                    r.minute = selectedTime.minute;
+                    r.subtitle = '$formattedTime • Daily';
+                  });
+
+                  await _syncRemindersWithService();
+                  await _saveRemindersToFirestore();
+
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Reminder "$newTitle" updated!')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Save Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -301,6 +441,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   Widget _reminderTile(ReminderItem r, ValueChanged<bool> onChanged) {
     return AppCard(
       padding: const EdgeInsets.all(12),
+      onTap: () => _openEditReminderDialog(r),
       child: Row(
         children: [
           CircleAvatar(radius: 16, backgroundColor: r.color.withValues(alpha: 0.12), child: Icon(r.icon, color: r.color, size: 18)),
@@ -324,6 +465,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 Text(r.subtitle, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
               ],
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.brandTeal),
+            onPressed: () => _openEditReminderDialog(r),
           ),
           Switch(
             value: r.enabled && _masterSwitch,
