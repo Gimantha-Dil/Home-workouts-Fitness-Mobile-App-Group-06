@@ -46,14 +46,58 @@ class Exercise {
       restSeconds: (map['restSeconds'] is int)
           ? map['restSeconds']
           : (map['rest_seconds'] is int
-              ? map['rest_seconds']
-              : (int.tryParse(map['restSeconds']?.toString() ?? '') ?? 30)),
+          ? map['rest_seconds']
+          : (int.tryParse(map['restSeconds']?.toString() ?? '') ?? 30)),
       difficulty: map['difficulty']?.toString() ?? 'Beginner',
       instructions: map['instructions'] is List
           ? List<String>.from(map['instructions'])
           : (map['instructions'] != null ? [map['instructions'].toString()] : []),
       tip: map['tip']?.toString() ?? '',
       videoUrl: map['videoUrl']?.toString() ?? map['video_url']?.toString(),
+    );
+  }
+}
+
+class AdvisorGuideline {
+  final String id;
+  final String workoutId;
+  final String advisorUid;
+  final String advisorName;
+  final String advisorSpecialty;
+  final String title;
+  final String instruction;
+
+  const AdvisorGuideline({
+    required this.id,
+    required this.workoutId,
+    required this.advisorUid,
+    required this.advisorName,
+    this.advisorSpecialty = 'Sports Medicine & Cardiology',
+    required this.title,
+    required this.instruction,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'workoutId': workoutId,
+      'advisorUid': advisorUid,
+      'advisorName': advisorName,
+      'advisorSpecialty': advisorSpecialty,
+      'title': title,
+      'instruction': instruction,
+    };
+  }
+
+  factory AdvisorGuideline.fromMap(Map<String, dynamic> map) {
+    return AdvisorGuideline(
+      id: map['id']?.toString() ?? '',
+      workoutId: map['workoutId']?.toString() ?? '',
+      advisorUid: map['advisorUid']?.toString() ?? '',
+      advisorName: map['advisorName']?.toString() ?? 'Dr. Medical Advisor',
+      advisorSpecialty: map['advisorSpecialty']?.toString() ?? 'Sports Medicine & Cardiology',
+      title: map['title']?.toString() ?? 'Doctor Verified Safety Guidance',
+      instruction: map['instruction']?.toString() ?? map['content']?.toString() ?? '',
     );
   }
 }
@@ -70,6 +114,7 @@ class Workout {
   final String? videoUrl;
   final String createdByName;
   final List<Exercise> exercises;
+  final List<AdvisorGuideline> advisorGuidelines;
 
   bool get hasExercises => exercises.isNotEmpty;
   bool get isPublished => status.toLowerCase() == 'published';
@@ -88,6 +133,7 @@ class Workout {
     this.videoUrl,
     this.createdByName = 'Coach Dinith',
     this.exercises = const [],
+    this.advisorGuidelines = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -108,6 +154,7 @@ class Workout {
       'created_by_name': createdByName,
       'authorName': createdByName,
       'exercises': exercises.map((e) => e.toMap()).toList(),
+      'advisorGuidelines': advisorGuidelines.map((g) => g.toMap()).toList(),
     };
   }
 
@@ -118,6 +165,17 @@ class Workout {
         if (e is Map) {
           try {
             list.add(Exercise.fromMap(Map<String, dynamic>.from(e)));
+          } catch (_) {}
+        }
+      }
+    }
+
+    final guidelinesList = <AdvisorGuideline>[];
+    if (map['advisorGuidelines'] is List) {
+      for (final g in map['advisorGuidelines'] as List) {
+        if (g is Map) {
+          try {
+            guidelinesList.add(AdvisorGuideline.fromMap(Map<String, dynamic>.from(g)));
           } catch (_) {}
         }
       }
@@ -150,6 +208,7 @@ class Workout {
       videoUrl: map['video_url']?.toString() ?? map['videoUrl']?.toString(),
       createdByName: authorName,
       exercises: list,
+      advisorGuidelines: guidelinesList,
     );
   }
 }
