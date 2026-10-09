@@ -1,10 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 
@@ -31,7 +30,25 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
     super.dispose();
   }
 
-  Future<void> _saveGuidance() async {
+  Future<void> _pickOrUploadImage() async {
+    setState(() => _saving = true);
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        final name = file.name;
+        final List<int> bytes = List<int>.from(file.bytes ?? []);
+        final url = await SupabaseService.uploadUserPhoto(fileName: name, photoBytes: bytes);
+        setState(() {
+          _uploadedImageUrl = url;
+          _uploadedImageName = name;
+        });
+      }
+    } catch (_) {}
+    setState(() => _saving = false);
+  }
+
+  Future<void> _saveGuidance([String? forcedStatus]) async {
     final user = context.read<AuthProvider>().currentUser;
     if (user?.verificationStatus != 'approved') {
       ScaffoldMessenger.of(context).showSnackBar(
