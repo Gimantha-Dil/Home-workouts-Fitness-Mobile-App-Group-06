@@ -1477,6 +1477,137 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 1. Hero Biomechanics Card
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              Image.network(
+                'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&auto=format&fit=crop',
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  height: 180,
+                  color: const Color(0xFF0D9488),
+                  child: const Icon(Icons.fitness_center, color: Colors.white, size: 40),
+                ),
+              ),
+              Container(
+                height: 180,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.transparent, Colors.black87],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+              // Top Badges
+              Positioned(
+                top: 10,
+                left: 10,
+                right: 10,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.timer_outlined, size: 12, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text('Tempo (2-0-2)', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.autorenew, size: 12, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text('Validated Biomechanics', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.bookmark_border, size: 16, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              // Bottom Title Overlay
+              Positioned(
+                bottom: 12,
+                left: 12,
+                right: 12,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('UPPER BODY • COMPOUND MOVEMENT', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 0.5)),
+                        SizedBox(height: 2),
+                        Text('Push Ups (Knee)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                      ],
+                    ),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: Colors.white24,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.play_arrow, color: Colors.white, size: 20),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+
+        // Primary Targets Muscle Chips Row
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('PRIMARY TARGETS', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.5)),
+            SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _MuscleChipItem(label: 'Chest / Pectorals', bg: Color(0xFFECFDF5), textCol: Color(0xFF047857), borderCol: Color(0xFFA7F3D0)),
+                _MuscleChipItem(label: 'Anterior Deltoids', bg: Color(0xFFE0F2FE), textCol: Color(0xFF0284C7), borderCol: Color(0xFFBAE6FD)),
+                _MuscleChipItem(label: 'Triceps Brachii', bg: Color(0xFFF3E8FF), textCol: Color(0xFF7C3AED), borderCol: Color(0xFFE9D5FF)),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // 2. Execution Steps Section
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -1487,26 +1618,191 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Exercise Instructions & Cues', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
-              const SizedBox(height: 12),
-              for (int i = 0; i < _instructionControllers.length; i++) ...[
-                Text('Step ${i + 1}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-                const SizedBox(height: 4),
-                TextField(controller: _instructionControllers[i], decoration: InputDecoration(hintText: 'Instruction step ${i + 1}')),
-                const SizedBox(height: 10),
-              ],
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => setState(() => _instructionControllers.add(TextEditingController())),
-                  icon: const Icon(Icons.add, color: AppColors.brandTeal),
-                  label: const Text('Add Step', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Execution Steps', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                      SizedBox(height: 1),
+                      Text('Tap step to verify cadence & position cues', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text('4 Stages', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Stage 1
+              _buildExecutionStepCard(
+                num: '1',
+                numColor: const Color(0xFF00A887),
+                title: 'Plank Foundation Setup',
+                desc: 'Start in a plank position with hands slightly wider than shoulder width.',
+                cue: 'Fingers pointed forward or slightly flared',
+                isCompleted: true,
+              ),
+              const SizedBox(height: 10),
+
+              // Stage 2
+              _buildExecutionStepCard(
+                num: '2',
+                numColor: const Color(0xFF00A887),
+                title: 'Core Brace & Alignment',
+                desc: 'Keep your body straight and core tight.',
+                cue: 'Create a rigid pillar from your head down to your knees',
+                isCompleted: true,
+              ),
+              const SizedBox(height: 10),
+
+              // Stage 3 (Active Focus)
+              _buildExecutionStepCard(
+                num: '3',
+                numColor: const Color(0xFF0284C7),
+                title: 'Eccentric Descent',
+                desc: 'Lower your body until your chest nearly touches the floor.',
+                cue: 'Maintain elbows at approximately a 45-degree angle',
+                isActiveFocus: true,
+              ),
+              const SizedBox(height: 10),
+
+              // Stage 4
+              _buildExecutionStepCard(
+                num: '4',
+                numColor: const Color(0xFF94A3B8),
+                title: 'Concentric Drive',
+                desc: 'Push back up to the starting position.',
+                cue: 'Fully extend arms without violently locking elbows.',
+                isPending: true,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 3. Coach Form Cues Section
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.lightbulb_outline, size: 16, color: Color(0xFF0F172A)),
+                  ),
+                  const SizedBox(width: 8),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Coach Form Cues', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                      Text('Prevent injury & maximize chest activation', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
-              const Text('Trainer Tips & Precautions', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-              const SizedBox(height: 4),
-              TextField(controller: _tipController, maxLines: 2, decoration: const InputDecoration(hintText: 'Keep back straight, engage core...')),
+
+              // Cue 1: Spine Alignment (Green)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle_outline, size: 16, color: Color(0xFF047857)),
+                        SizedBox(width: 6),
+                        Text('Spine Alignment', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF047857))),
+                      ],
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Keep your back straight and maintain a strictly neutral cervical spine throughout the rep.',
+                      style: TextStyle(fontSize: 10.5, color: Color(0xFF065F46), height: 1.3),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Cue 2: Shoulder Impingement Risk (Red)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFB91C1C)),
+                        SizedBox(width: 6),
+                        Text('Shoulder Impingement Risk', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFFB91C1C))),
+                      ],
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Avoid arching your lower back or flaring elbows past 70° to protect the rotator cuff.',
+                      style: TextStyle(fontSize: 10.5, color: Color(0xFF991B1B), height: 1.3),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Cue 3: Respiration Pattern (Blue)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2FE),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBAE6FD)),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.air, size: 16, color: Color(0xFF0369A1)),
+                        SizedBox(width: 6),
+                        Text('Respiration Pattern', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0369A1))),
+                      ],
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Breathe naturally: Inhale smoothly on the descent, exhale forcefully on the press.',
+                      style: TextStyle(fontSize: 10.5, color: Color(0xFF075985), height: 1.3),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -1514,95 +1810,443 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
     );
   }
 
+  Widget _buildExecutionStepCard({
+    required String num,
+    required Color numColor,
+    required String title,
+    required String desc,
+    required String cue,
+    bool isCompleted = false,
+    bool isActiveFocus = false,
+    bool isPending = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isActiveFocus ? const Color(0xFFF8FAFC) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isActiveFocus ? const Color(0xFF0284C7) : const Color(0xFFE2E8F0),
+          width: isActiveFocus ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: numColor,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              num,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                    if (isActiveFocus)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F2FE),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('Active Focus', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                      )
+                    else if (isCompleted)
+                      const Icon(Icons.check_circle, size: 16, color: Color(0xFF94A3B8))
+                    else
+                      const Icon(Icons.circle_outlined, size: 16, color: Color(0xFFCBD5E1)),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  desc,
+                  style: const TextStyle(fontSize: 10.5, color: Color(0xFF475569), height: 1.3),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.check, size: 12, color: Color(0xFF64748B)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        cue,
+                        style: const TextStyle(fontSize: 9.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStep3VideoUploadContent() {
+    final fileNameText = _uploadedFileName.isNotEmpty ? _uploadedFileName : 'barbell_back_squat_raw_v1.mp4';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Exercise Demonstration Video', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: _handleChooseVideoFile,
-                child: Container(
-                  height: 180,
-                  width: double.infinity,
+        // Header Row: STEP 3 OF 4 • VIDEO FOOTAGE + Title
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text('🎥 STEP 3 OF 4 • VIDEO FOOTAGE', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF475569), letterSpacing: 0.5)),
+                SizedBox(height: 2),
+                Text('Upload Exercise Video', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                SizedBox(height: 1),
+                Text('Provide high-definition demonstration footage for your exercise card.', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.circle, size: 5, color: Color(0xFF475569)),
+                  SizedBox(width: 4),
+                  Text('Draft Auto-Saved', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        // 1. Drag & Drop Upload Container Card
+        GestureDetector(
+          onTap: _handleChooseVideoFile,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: const Color(0xFFE0F2FE),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.brandTeal, width: 1.5),
                   ),
-                  child: _isUploadingVideo
-                      ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                  child: const Icon(Icons.cloud_upload, size: 28, color: Color(0xFF0284C7)),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Drag & drop video file here',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'or browse device library to select clips',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00A887), Color(0xFF0284C7)],
+                    ),
+                  ),
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    ),
+                    onPressed: _handleChooseVideoFile,
+                    icon: const Icon(Icons.movie_creation_outlined, size: 16, color: Colors.white),
+                    label: const Text('Choose File', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.info_outline, size: 12, color: Color(0xFF64748B)),
+                    SizedBox(width: 4),
+                    Text('MP4, MOV (Max 100MB • 1080p Recommended)', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // 2. Video Player & Trimmer Studio Card
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            children: [
+              // Top Video Stream Box
+              Stack(
+                children: [
+                  Image.network(
+                    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&auto=format&fit=crop',
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 200,
+                      color: const Color(0xFF0F172A),
+                      child: const Icon(Icons.fitness_center, color: Colors.white, size: 40),
+                    ),
+                  ),
+                  Container(
+                    height: 200,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.black54, Colors.transparent, Colors.black87],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                  // Top Overlay Badges
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    right: 10,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('1080p • 60 FPS', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('16:9 HD', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Center / Right Play Button
+                  Positioned(
+                    top: 80,
+                    right: 16,
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF0284C7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.play_arrow, color: Colors.white, size: 24),
+                    ),
+                  ),
+                  // Bottom Left Time Counter
+                  Positioned(
+                    bottom: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text('00:02 / 00:24', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Bottom Trimmer Studio Panel
+              Container(
+                padding: const EdgeInsets.all(12),
+                color: const Color(0xFF0F172A),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text('● TRIMMER STUDIO', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), letterSpacing: 0.5)),
+                        Text('Active Duration: 00:20', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Timeline Trimmer Track
+                    Container(
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF0284C7), width: 1.5),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 10,
+                            height: double.infinity,
+                            color: const Color(0xFF0284C7),
+                            child: const Icon(Icons.drag_indicator, size: 10, color: Colors.white),
+                          ),
+                          Expanded(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: List.generate(
+                                8,
+                                (i) => Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF334155),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Icon(Icons.image, size: 12, color: Colors.white38),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 10,
+                            height: double.infinity,
+                            color: const Color(0xFF0284C7),
+                            child: const Icon(Icons.drag_indicator, size: 10, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // In / Out Time Indicators
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('In: 00:02', style: TextStyle(fontSize: 9.5, color: Colors.white70)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0284C7).withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text('Trim Area (00:20 Total)', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
+                        ),
+                        const Text('Out: 00:22', style: TextStyle(fontSize: 9.5, color: Colors.white70)),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Controls Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: const [
+                        Row(
                           children: [
-                            CircularProgressIndicator(color: AppColors.brandTeal),
-                            SizedBox(height: 12),
-                            Text(
-                              'Uploading MP4 to Supabase Storage (exercise-videos)...',
-                              style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 12),
-                            ),
-                          ],
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _videoAttached ? Icons.cloud_done : Icons.cloud_upload_outlined,
-                              color: AppColors.brandTeal,
-                              size: 42,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _videoAttached ? 'Video Uploaded to Supabase!' : 'Drag & drop MP4 video or tap to upload',
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            if (_uploadedFileName.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                'File: $_uploadedFileName',
-                                style: const TextStyle(color: AppColors.brandTeal, fontSize: 11, fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                            const SizedBox(height: 10),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.brandTeal,
-                                minimumSize: const Size(140, 36),
-                              ),
-                              onPressed: _handleChooseVideoFile,
-                              icon: const Icon(Icons.upload_file, size: 16),
-                              label: const Text('Choose File', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                            ),
+                            Icon(Icons.rotate_right, size: 14, color: Colors.white70),
+                            SizedBox(width: 4),
+                            Text('Rotate 90°', style: TextStyle(fontSize: 10, color: Colors.white70)),
                           ],
                         ),
+                        Row(
+                          children: [
+                            Icon(Icons.volume_up, size: 14, color: Colors.white70),
+                            SizedBox(width: 4),
+                            Text('Audio On', style: TextStyle(fontSize: 10, color: Colors.white70)),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Icon(Icons.fullscreen, size: 14, color: Colors.white70),
+                            SizedBox(width: 4),
+                            Text('Expand', style: TextStyle(fontSize: 10, color: Colors.white70)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 14),
-              const Text('Video URL (Supabase CDN / Direct Link)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-              const SizedBox(height: 4),
-              TextField(
-                controller: _videoUrlController,
-                style: const TextStyle(fontSize: 12),
-                decoration: const InputDecoration(
-                  hintText: 'https://ctguxkodnxxntloshlls.supabase.co/storage/v1/...',
-                  prefixIcon: Icon(Icons.link, color: AppColors.brandTeal),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // 4. FastTrack Quality Assurance Card
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFECFDF5),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFA7F3D0)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0D9488),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.shield_outlined, size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text('FastTrack Quality Assurance', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF047857))),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD1FAE5),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text('ACTIVE', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF047857))),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Video will be automatically transcoded into a smooth 60fps mobile-optimized stream upon submission.',
+                      style: TextStyle(fontSize: 10, color: Color(0xFF065F46), height: 1.3),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text('Supported formats: MP4, MOV (Max 100MB)', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
             ],
           ),
         ),
@@ -1611,7 +2255,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   }
 
   Widget _buildBottomActionBar() {
-    final nextBtnLabels = ['Next: Add Exercises →', 'Next: Instructions →', 'Next: Upload Video →', 'Review & Publish →'];
+    final nextBtnLabels = ['Next: Add Exercises →', 'Next: Instructions →', 'Next: Video Upload →', 'Review & Publish →'];
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1619,28 +2263,44 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       child: Row(
         children: [
           Expanded(
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                backgroundColor: const Color(0xFFECFDF5),
-                foregroundColor: const Color(0xFF0D9488),
-                side: const BorderSide(color: Color(0xFF99F6E4), width: 1.2),
-                minimumSize: const Size.fromHeight(48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('🔖 Draft routine saved locally and to Supabase!'),
-                    backgroundColor: AppColors.brandTeal,
+            child: _step == 0
+                ? OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: const Color(0xFFECFDF5),
+                      foregroundColor: const Color(0xFF0D9488),
+                      side: const BorderSide(color: Color(0xFF99F6E4), width: 1.2),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('🔖 Draft routine saved locally and to Supabase!'),
+                          backgroundColor: AppColors.brandTeal,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.bookmark_border, size: 18),
+                    label: const Text(
+                      'Save Draft',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                  )
+                : OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      foregroundColor: const Color(0xFF0F172A),
+                      side: BorderSide.none,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: _back,
+                    icon: const Icon(Icons.arrow_back, size: 18, color: Color(0xFF0F172A)),
+                    label: const Text(
+                      'Previous',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
                   ),
-                );
-              },
-              icon: const Icon(Icons.bookmark_border, size: 18),
-              label: const Text(
-                'Save Draft',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-              ),
-            ),
           ),
           const SizedBox(width: 12),
           Expanded(
