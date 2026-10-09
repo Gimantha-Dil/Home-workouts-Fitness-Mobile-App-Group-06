@@ -5,26 +5,13 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
-import 'advisor_settings_screen.dart';
+import '../customer/advisor_chat_screen.dart';
 import 'create_guidance_screen.dart';
 import 'health_considerations_screen.dart';
 import 'safety_content_screen.dart';
 
 class AdvisorDashboardScreen extends StatelessWidget {
   const AdvisorDashboardScreen({super.key});
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'Good morning';
-    } else if (hour < 17) {
-      return 'Good afternoon';
-    } else if (hour < 21) {
-      return 'Good evening';
-    } else {
-      return 'Good night';
-    }
-  }
 
   void _showGuideOptions(BuildContext context, Map<String, dynamic> guide) {
     final docId = guide['id'] as String;
@@ -276,29 +263,23 @@ class AdvisorDashboardScreen extends StatelessWidget {
         elevation: 0,
         title: Row(
           children: [
-            GestureDetector(
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdvisorSettingsScreen())),
-              child: CircleAvatar(
-                radius: 16,
-                child: ClipOval(
-                  child: AppNetworkImage(
-                    url: user?.profilePhotoUrl,
-                    width: 32,
-                    height: 32,
-                  ),
+            CircleAvatar(
+              radius: 16,
+              child: ClipOval(
+                child: AppNetworkImage(
+                  url: user?.profilePhotoUrl,
+                  width: 32,
+                  height: 32,
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdvisorSettingsScreen())),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${_getGreeting()}, ${user?.name ?? 'Advisor'}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const Text('Healthcare Advisor Portal', style: TextStyle(fontSize: 9, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-                ],
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Good morning, ${user?.name ?? 'Advisor'}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                const Text('Clinical Dashboard • Live Firestore DB', style: TextStyle(fontSize: 9, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+              ],
             ),
           ],
         ),
@@ -391,7 +372,7 @@ class AdvisorDashboardScreen extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Open Clinical Chat Line 💬', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.brandTeal)),
+                                    const Text('Open Clinical Chat Line', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.brandTeal)),
                                     Text('Tap to open patient consultation room and message trainees.', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                   ],
                                 ),
@@ -466,7 +447,7 @@ class AdvisorDashboardScreen extends StatelessWidget {
                                       ),
                                     );
                                   },
-                                  child: const Text('Reply 💬', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                  child: const Text('Reply', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                                 ),
                               ],
                             ),
