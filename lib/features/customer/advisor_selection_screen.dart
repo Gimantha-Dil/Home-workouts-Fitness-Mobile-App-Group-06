@@ -80,7 +80,7 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('⚡ ${advisor.name} selected as your Medical Advisor!'),
+            content: Text('${advisor.name} selected as your Medical Advisor.'),
             backgroundColor: AppColors.brandTeal,
           ),
         );
@@ -209,7 +209,7 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: ElevatedButton.icon(
+                              child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: AppColors.brandTealDark,
@@ -228,12 +228,11 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                     ),
                                   );
                                 },
-                                icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                                label: const Text('Message Doctor 💬', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                                child: const Text('Message Doctor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                               ),
                             ),
                             const SizedBox(width: 10),
-                            OutlinedButton.icon(
+                            OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.white,
                                 side: const BorderSide(color: Colors.white54),
@@ -241,8 +240,7 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                 minimumSize: const Size(100, 38),
                               ),
                               onPressed: _unselectAdvisor,
-                              icon: const Icon(Icons.swap_horiz, size: 16),
-                              label: const Text('Change 🔄', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                              child: const Text('Change Doctor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                             ),
                           ],
                         ),
@@ -369,12 +367,12 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                             ),
                                     ),
                                     const SizedBox(width: 8),
-                                    OutlinedButton.icon(
+                                    OutlinedButton(
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: AppColors.brandTeal,
                                         side: const BorderSide(color: AppColors.brandTeal),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        minimumSize: const Size(100, 36),
+                                        minimumSize: const Size(80, 36),
                                       ),
                                       onPressed: () {
                                         Navigator.of(context).push(
@@ -388,8 +386,7 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                           ),
                                         );
                                       },
-                                      icon: const Icon(Icons.chat_bubble_outline, size: 14),
-                                      label: const Text('Chat', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                      child: const Text('Chat', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                                     ),
                                   ],
                                 ),
