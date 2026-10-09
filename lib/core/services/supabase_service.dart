@@ -232,8 +232,12 @@ class SupabaseService {
         return Supabase.instance.client
             .from('workouts')
             .stream(primaryKey: ['id'])
-            .order('created_at', ascending: false)
-            .map((list) => list.map((map) => Workout.fromMap(map)).toList());
+            .map((list) {
+              final workouts = list.map((map) => Workout.fromMap(map)).toList();
+              // Sort by ID / timestamp descending so newest created/updated workouts appear first
+              workouts.sort((a, b) => b.id.compareTo(a.id));
+              return workouts;
+            });
       }
     } catch (e) {
       debugPrint('⚡ Supabase Stream Workouts Note: $e');
