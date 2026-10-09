@@ -72,6 +72,7 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
         child: StreamBuilder<List<Workout>>(
           stream: SupabaseService.streamWorkoutsFromSupabase(),
           builder: (context, snapshot) {
+            final user = context.watch<AuthProvider>().currentUser;
             final docs = snapshot.data ?? [];
 
             var filtered = docs;
