@@ -28,7 +28,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   final _exerciseNameController = TextEditingController();
   final _setsController = TextEditingController(text: '3');
   final _repsController = TextEditingController(text: '10');
-  final _restController = TextEditingController(text: '60');
+  final _restController = TextEditingController(text: '30');
   String _exerciseDifficulty = 'Beginner';
 
   // Step 3 - instructions
@@ -63,29 +63,12 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           bytes = await file.readAsBytes();
         }
 
-        // Default bytes fallback
         bytes ??= List<int>.generate(2048, (i) => i % 256);
 
         // Upload directly to Supabase Storage bucket 'exercise-videos'
         final cdnUrl = await SupabaseService.uploadExerciseVideo(
           fileName: fileName,
           videoBytes: bytes,
-        );
-
-        // Save / Insert record directly to Supabase Database 'workouts' table
-        final newWorkoutId = 'w_${DateTime.now().millisecondsSinceEpoch}';
-        final workoutTitle = _titleController.text.trim().isNotEmpty
-            ? _titleController.text.trim()
-            : 'New Workout';
-        final workoutDuration = int.tryParse(_duration.replaceAll(RegExp(r'[^0-9]'), '')) ?? 20;
-
-        await SupabaseService.saveWorkoutToSupabase(
-          workoutId: newWorkoutId,
-          title: workoutTitle,
-          level: _targetLevel,
-          durationMinutes: workoutDuration,
-          status: 'published',
-          videoUrl: cdnUrl,
         );
 
         if (mounted) {
@@ -98,7 +81,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('⚡ Video "$fileName" uploaded to Supabase Storage (exercise-videos) & saved to Database!'),
+              content: Text('⚡ Video "$fileName" uploaded to Supabase Storage!'),
               backgroundColor: AppColors.brandTeal,
             ),
           );
@@ -117,21 +100,6 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
         videoBytes: sampleBytes,
       );
 
-      final newWorkoutId = 'w_${DateTime.now().millisecondsSinceEpoch}';
-      final workoutTitle = _titleController.text.trim().isNotEmpty
-          ? _titleController.text.trim()
-          : 'New Workout';
-      final workoutDuration = int.tryParse(_duration.replaceAll(RegExp(r'[^0-9]'), '')) ?? 20;
-
-      await SupabaseService.saveWorkoutToSupabase(
-        workoutId: newWorkoutId,
-        title: workoutTitle,
-        level: _targetLevel,
-        durationMinutes: workoutDuration,
-        status: 'published',
-        videoUrl: cdnUrl,
-      );
-
       if (mounted) {
         setState(() {
           _videoUrl = cdnUrl;
@@ -142,7 +110,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('⚡ Video uploaded to Supabase Storage (exercise-videos) & saved to Database!'),
+            content: Text('⚡ Video uploaded to Supabase Storage!'),
             backgroundColor: AppColors.brandTeal,
           ),
         );
@@ -154,19 +122,33 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
     if (_step < 3) {
       setState(() => _step++);
     } else {
-      if (_exerciseNameController.text.trim().isEmpty) {
+      final exerciseName = _exerciseNameController.text.trim();
+      if (exerciseName.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Add at least one exercise before publishing.')),
+          const SnackBar(content: Text('Please enter an exercise name in Step 2.')),
         );
         return;
       }
+
+      final sets = int.tryParse(_setsController.text.trim()) ?? 3;
+      final reps = int.tryParse(_repsController.text.trim()) ?? 10;
+      final rest = int.tryParse(_restController.text.trim()) ?? 30;
+      final instructions = _instructionControllers.map((c) => c.text.trim()).where((t) => t.isNotEmpty).toList();
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => PublishWorkoutScreen(
-            title: _titleController.text.isEmpty ? 'New Workout' : _titleController.text,
+            title: _titleController.text.isEmpty ? 'New Workout' : _titleController.text.trim(),
             level: _targetLevel,
             duration: _duration,
             videoUrl: _videoUrl,
+            exerciseName: exerciseName,
+            sets: sets,
+            reps: reps,
+            restSeconds: rest,
+            exerciseDifficulty: _exerciseDifficulty,
+            instructions: instructions,
+            tip: _tipController.text.trim(),
           ),
         ),
       );
@@ -228,7 +210,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                   if (_step > 0)
                     Expanded(child: PrimaryButton(label: 'Previous', outlined: true, onPressed: _back)),
                   if (_step > 0) const SizedBox(width: 12),
-                  Expanded(child: PrimaryButton(label: _step == 3 ? 'Next' : 'Next', onPressed: _next)),
+                  Expanded(child: PrimaryButton(label: _step == 3 ? 'Publish →' : 'Next', onPressed: _next)),
                 ],
               ),
             ),
@@ -276,7 +258,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _label('Exercise Name *'),
-            TextField(controller: _exerciseNameController, decoration: const InputDecoration(hintText: 'e.g. Push Ups')),
+            TextField(controller: _exerciseNameController, decoration: const InputDecoration(hintText: 'e.g. Push Ups, Arm Circles, Squats')),
             Row(
               children: [
                 Expanded(
@@ -344,9 +326,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                   ),
                 ),
                 child: _isUploadingVideo
-                    ? Column(
+                    ? const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
+                        children: [
                           CircularProgressIndicator(color: AppColors.brandTeal),
                           SizedBox(height: 12),
                           Text(
@@ -455,4 +437,3 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
     );
   }
 }
-

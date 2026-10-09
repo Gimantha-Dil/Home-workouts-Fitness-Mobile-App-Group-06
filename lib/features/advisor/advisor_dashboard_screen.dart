@@ -12,6 +12,244 @@ import 'safety_content_screen.dart';
 class AdvisorDashboardScreen extends StatelessWidget {
   const AdvisorDashboardScreen({super.key});
 
+  void _showGuideOptions(BuildContext context, Map<String, dynamic> guide) {
+    final docId = guide['id'] as String;
+    final title = guide['title'] ?? '';
+    final category = guide['category'] ?? 'Warm-up';
+    final content = guide['content'] ?? '';
+    final status = guide['status'] ?? 'Draft';
+    final imageUrl = guide['imageUrl'] ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(6)),
+                  child: Text(status.toUpperCase(), style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('Category: $category', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.edit_outlined, color: AppColors.brandTeal)),
+              title: const Text('Edit Guidance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              subtitle: const Text('Modify title, content, category or status', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showEditDialog(context, docId, title, category, content, status, imageUrl);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFFEF2F2), child: Icon(Icons.delete_outline, color: AppColors.danger)),
+              title: const Text('Delete Guidance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.danger)),
+              subtitle: const Text('Permanently remove from database', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showDeleteConfirmation(context, docId, title);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, String docId, String initialTitle, String initialCategory, String initialContent, String initialStatus, String initialImageUrl) {
+    final titleController = TextEditingController(text: initialTitle);
+    String category = initialCategory;
+    final contentController = TextEditingController(text: initialContent);
+    String status = initialStatus;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Safety Guidance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: SizedBox(
+          width: 400,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('TITLE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
+                TextField(controller: titleController),
+                const SizedBox(height: 12),
+                const Text('CATEGORY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  value: ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations'].contains(category) ? category : 'Warm-up',
+                  items: const ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations']
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12))))
+                      .toList(),
+                  onChanged: (v) => category = v!,
+                ),
+                const SizedBox(height: 12),
+                const Text('CONTENT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
+                TextField(controller: contentController, maxLines: 4),
+                const SizedBox(height: 12),
+                const Text('STATUS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
+                DropdownButtonFormField<String>(
+                  value: ['Published', 'Draft', 'Pending'].contains(status) ? status : 'Published',
+                  items: const ['Published', 'Draft', 'Pending']
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12))))
+                      .toList(),
+                  onChanged: (v) => status = v!,
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newTitle = titleController.text.trim();
+              final newContent = contentController.text.trim();
+              if (newTitle.isEmpty) return;
+
+              try {
+                await FirebaseFirestore.instance.collection('safetyContent').doc(docId).update({
+                  'title': newTitle,
+                  'category': category,
+                  'content': newContent,
+                  'status': status,
+                });
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Safety guidance updated successfully!')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to update: $e')),
+                );
+              }
+            },
+            child: const Text('Save Changes', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, String docId, String title) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Safety Guidance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Text('Are you sure you want to delete "$title"? This action cannot be undone.', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await FirebaseFirestore.instance.collection('safetyContent').doc(docId).delete();
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Safety guidance deleted successfully!')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to delete: $e')),
+                );
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _activityTile(BuildContext context, Map<String, dynamic> guide) {
+    final title = guide['title'] ?? 'Safety Protocol';
+    final desc = guide['category'] ?? 'General Safety';
+    final badge = (guide['status'] ?? 'Published').toUpperCase();
+
+    return AppCard(
+      padding: const EdgeInsets.all(12),
+      onTap: () => _showGuideOptions(context, guide),
+      child: Row(
+        children: [
+          const CircleAvatar(radius: 14, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.medical_services_outlined, color: AppColors.brandTeal, size: 16)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    const Text('Firestore DB', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(desc, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(6)),
+                      child: Text(badge, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.brandTeal),
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                      tooltip: 'Edit Guidance',
+                      onPressed: () => _showEditDialog(
+                        context,
+                        guide['id'],
+                        title,
+                        desc,
+                        guide['content'] ?? '',
+                        guide['status'] ?? 'Published',
+                        guide['imageUrl'] ?? '',
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
+                      constraints: const BoxConstraints(),
+                      padding: EdgeInsets.zero,
+                      tooltip: 'Delete Guidance',
+                      onPressed: () => _showDeleteConfirmation(context, guide['id'], title),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
@@ -167,13 +405,9 @@ class AdvisorDashboardScreen extends StatelessWidget {
                   )
                 else
                   ...docs.take(5).map((g) {
-                    final title = g['title'] ?? 'Safety Protocol';
-                    final category = g['category'] ?? 'General Safety';
-                    final status = g['status'] ?? 'Published';
-
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
-                      child: _activityTile(title, category, status.toUpperCase(), 'Firestore DB'),
+                      child: _activityTile(context, g),
                     );
                   }),
 
@@ -206,40 +440,6 @@ class AdvisorDashboardScreen extends StatelessWidget {
             );
           },
         ),
-      ),
-    );
-  }
-
-  Widget _activityTile(String title, String desc, String badge, String time) {
-    return AppCard(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          const CircleAvatar(radius: 14, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.medical_services_outlined, color: AppColors.brandTeal, size: 16)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    Text(time, style: const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(desc, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(6)),
-                  child: Text(badge, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

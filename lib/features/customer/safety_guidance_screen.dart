@@ -6,8 +6,8 @@ import 'active_workout_screen.dart';
 import 'profile_screen.dart';
 
 class SafetyGuidanceScreen extends StatelessWidget {
-  final Workout workout;
-  const SafetyGuidanceScreen({super.key, required this.workout});
+  final Workout? workout;
+  const SafetyGuidanceScreen({super.key, this.workout});
 
   @override
   Widget build(BuildContext context) {
@@ -147,14 +147,14 @@ class SafetyGuidanceScreen extends StatelessWidget {
               child: PrimaryButton(
                 label: "Got it, Let's Workout! →",
                 onPressed: () {
-                  if (!workout.hasExercises) {
+                  if (workout == null || !workout!.hasExercises) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('This workout has no exercises yet.')),
+                      const SnackBar(content: Text('No active workout selected.')),
                     );
                     return;
                   }
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => ActiveWorkoutScreen(workout: workout)),
+                    MaterialPageRoute(builder: (_) => ActiveWorkoutScreen(workout: workout!)),
                   );
                 },
               ),

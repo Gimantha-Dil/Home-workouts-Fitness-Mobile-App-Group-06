@@ -69,6 +69,7 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
     final minutesDone = (activeSecs / 60.0).round();
     final caloriesDone = computeEstimatedCalories(activeSecs);
     final exercisesDone = widget.session?.setResults.length ?? widget.workout.exercises.length;
+    final xpEarned = 100 + (minutesDone * 10);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -119,6 +120,33 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // Real XP Earned Reward Card
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFF0F3D3A), Color(0xFF0D9488)]),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const CircleAvatar(radius: 18, backgroundColor: Colors.white24, child: Icon(Icons.bolt, color: Colors.amber, size: 22)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('+$xpEarned XP EARNED!', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.amber)),
+                        const SizedBox(height: 2),
+                        const Text('XP added to your profile in real-time!', style: TextStyle(fontSize: 11, color: Colors.white70)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
             Row(
               children: [
                 Expanded(child: StatCard(label: 'Minutes', value: '$minutesDone', icon: Icons.timer_outlined, color: AppColors.info)),
@@ -129,28 +157,7 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            // Streak Increased Card
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFDE68A))),
-              child: const Row(
-                children: [
-                  Icon(Icons.local_fire_department, color: AppColors.warning, size: 22),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Streak Increased to 13 Days! Lv. 2', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
-                        SizedBox(height: 2),
-                        Text('2 days until Level 2 streak badge • Bronze Athlete', style: TextStyle(fontSize: 10, color: Color(0xFF78350F))),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+
             // Image Card
             AppNetworkImage(
               url: widget.workout.imageUrl,
@@ -159,6 +166,7 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             const SizedBox(height: 16),
+
             // Rating Feedback Card
             AppCard(
               padding: const EdgeInsets.all(16),
