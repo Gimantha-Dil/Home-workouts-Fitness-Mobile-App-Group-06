@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/workout_model.dart';
@@ -6,6 +9,7 @@ import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import '../../shared/widgets/exercise_video_player.dart';
 import 'create_workout_screen.dart';
 import 'edit_workout_screen.dart';
 import 'trainer_profile_screen.dart';
@@ -27,6 +31,151 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleUploadOrEditVideo(Workout workout) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.video,
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final pickedFile = result.files.first;
+        final fileName = pickedFile.name.isNotEmpty
+            ? pickedFile.name
+            : 'video_${DateTime.now().millisecondsSinceEpoch}.mp4';
+
+        List<int>? bytes = pickedFile.bytes;
+        if (bytes == null && !kIsWeb && pickedFile.path != null) {
+          final file = File(pickedFile.path!);
+          bytes = await file.readAsBytes();
+        }
+
+        bytes ??= List<int>.generate(2048, (i) => i % 256);
+
+        // Upload to Supabase Storage bucket 'exercise-videos'
+        final cdnUrl = await SupabaseService.uploadExerciseVideo(
+          fileName: fileName,
+          videoBytes: bytes,
+        );
+
+        // Update workout record in Supabase Database 'workouts' table
+        await SupabaseService.saveWorkoutToSupabase(
+          workoutId: workout.id,
+          title: workout.title,
+          level: workout.level,
+          durationMinutes: workout.durationMinutes,
+          status: workout.status,
+          videoUrl: cdnUrl,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('⚡ Video "$fileName" uploaded to Supabase Storage & updated in Database!'),
+              backgroundColor: AppColors.brandTeal,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error uploading video: $e');
+    }
+  }
+
+  Future<void> _confirmDeleteVideo(Workout workout) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Video', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete the exercise video for "${workout.title}" from Supabase Storage?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete Video'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && workout.videoUrl != null) {
+      await SupabaseService.deleteExerciseVideoFromSupabase(
+        videoUrl: workout.videoUrl!,
+        workoutId: workout.id,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🗑 Video deleted from Supabase Storage & Database!'),
+            backgroundColor: AppColors.brandTeal,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteWorkout(Workout workout) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Workout', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete "${workout.title}" from Supabase Database?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete Workout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await SupabaseService.deleteWorkoutFromSupabase(
+        workoutId: workout.id,
+        videoUrl: workout.videoUrl,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🗑 Workout "${workout.title}" deleted from Supabase Database!'),
+            backgroundColor: AppColors.brandTeal,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showPlayVideoDialog(Workout workout) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ExerciseVideoPlayer(
+              videoUrl: workout.videoUrl ?? '',
+              title: workout.title,
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.black),
+              onPressed: () => Navigator.of(ctx).pop(),
+              icon: const Icon(Icons.close),
+              label: const Text('Close Player'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -215,6 +364,8 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
                           if (w.status.toLowerCase() == 'draft') statusColor = AppColors.warning;
                           if (w.status.toLowerCase() == 'under review') statusColor = AppColors.info;
 
+                          final hasVideo = w.videoUrl != null && w.videoUrl!.isNotEmpty;
+
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: AppCard(
@@ -238,7 +389,14 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
                                             Row(
                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
-                                                Text(w.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                                Expanded(
+                                                  child: Text(
+                                                    w.title,
+                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
                                                 _Badge(text: '• ${w.status.toUpperCase()}', color: statusColor),
                                               ],
                                             ),
@@ -250,22 +408,134 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 10),
+
+                                  // Video Management Bar for Trainer
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF8FAFC),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          hasVideo ? Icons.movie : Icons.movie_outlined,
+                                          size: 16,
+                                          color: hasVideo ? AppColors.brandTeal : AppColors.textSecondary,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            hasVideo ? 'Supabase MP4 Video Attached' : 'No Video Attached',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: hasVideo ? AppColors.brandTeal : AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                        if (hasVideo) ...[
+                                          InkWell(
+                                            onTap: () => _showPlayVideoDialog(w),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(color: const Color(0xFFE0F2FE), borderRadius: BorderRadius.circular(6)),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.play_arrow, size: 12, color: Color(0xFF0284C7)),
+                                                  SizedBox(width: 2),
+                                                  Text('Play', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF0284C7))),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          InkWell(
+                                            onTap: () => _handleUploadOrEditVideo(w),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(6)),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.edit, size: 10, color: AppColors.brandTeal),
+                                                  SizedBox(width: 2),
+                                                  Text('Edit Video', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          InkWell(
+                                            onTap: () => _confirmDeleteVideo(w),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(6)),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.delete_outline, size: 10, color: AppColors.danger),
+                                                  SizedBox(width: 2),
+                                                  Text('Delete Video', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.danger)),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ] else ...[
+                                          InkWell(
+                                            onTap: () => _handleUploadOrEditVideo(w),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(6)),
+                                              child: const Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(Icons.add, size: 12, color: AppColors.brandTeal),
+                                                  SizedBox(width: 2),
+                                                  Text('Upload Video', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       _Badge(text: w.goal, color: AppColors.brandTeal),
-                                      OutlinedButton.icon(
-                                        style: OutlinedButton.styleFrom(
-                                          minimumSize: const Size(60, 28),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                          side: const BorderSide(color: AppColors.brandTeal),
-                                        ),
-                                        onPressed: () => Navigator.of(context).push(
-                                          MaterialPageRoute(builder: (_) => EditWorkoutScreen(workout: w)),
-                                        ),
-                                        icon: const Icon(Icons.edit_outlined, size: 12, color: AppColors.brandTeal),
-                                        label: const Text('Edit', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                      Row(
+                                        children: [
+                                          OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              minimumSize: const Size(60, 28),
+                                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              side: const BorderSide(color: AppColors.brandTeal),
+                                            ),
+                                            onPressed: () => Navigator.of(context).push(
+                                              MaterialPageRoute(builder: (_) => EditWorkoutScreen(workout: w)),
+                                            ),
+                                            icon: const Icon(Icons.edit_outlined, size: 12, color: AppColors.brandTeal),
+                                            label: const Text('Edit', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          IconButton(
+                                            style: IconButton.styleFrom(
+                                              backgroundColor: const Color(0xFFFEF2F2),
+                                              padding: const EdgeInsets.all(6),
+                                              minimumSize: const Size(28, 28),
+                                            ),
+                                            icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
+                                            onPressed: () => _confirmDeleteWorkout(w),
+                                            tooltip: 'Delete Workout',
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
