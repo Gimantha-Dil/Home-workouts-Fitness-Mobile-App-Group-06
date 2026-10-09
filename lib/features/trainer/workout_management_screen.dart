@@ -31,6 +31,8 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
