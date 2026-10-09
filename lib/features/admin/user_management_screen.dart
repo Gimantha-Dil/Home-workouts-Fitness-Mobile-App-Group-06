@@ -15,6 +15,7 @@ class UserManagementScreen extends StatefulWidget {
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
   String _selectedRoleFilter = 'All Roles';
+  String _statusTab = 'all';
   String _searchQuery = '';
   final _searchController = TextEditingController();
 
@@ -230,8 +231,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           builder: (context, snapshot) {
             final docs = snapshot.data?.docs.map((d) => {'id': d.id, ...d.data()}).toList() ?? [];
 
-            // Filter by Dropdown Role
+            final totalUsers = docs.length;
+            final activeUsers = docs.where((u) => (u['verificationStatus'] ?? 'none') != 'pending' && (u['verificationStatus'] ?? 'none') != 'suspended').length;
+            final pendingUsers = docs.where((u) => (u['verificationStatus'] ?? 'none') == 'pending').length;
+
+            // Filter by Status Tab
             var filtered = docs;
+            if (_statusTab == 'active') {
+              filtered = filtered.where((u) => (u['verificationStatus'] ?? 'none') != 'pending' && (u['verificationStatus'] ?? 'none') != 'suspended').toList();
+            } else if (_statusTab == 'pending') {
+              filtered = filtered.where((u) => (u['verificationStatus'] ?? 'none') == 'pending').toList();
+            }
+
+            // Filter by Dropdown Role
             if (_selectedRoleFilter != 'All Roles') {
               final targetRole = _selectedRoleFilter.toLowerCase().replaceAll('s', '');
               filtered = filtered.where((u) {
@@ -251,10 +263,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               }).toList();
             }
 
-            final totalUsers = docs.length;
-            final activeUsers = docs.where((u) => u['verificationStatus'] != 'suspended').length;
-            final pendingUsers = docs.where((u) => u['verificationStatus'] == 'pending').length;
-
             return Column(
               children: [
                 Expanded(
@@ -272,14 +280,29 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       const Text('Review, verify and moderate all registered platform users in real-time.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       const SizedBox(height: 16),
 
-                      // Summary Badges
+                      // Summary Badges (Clickable Tabs)
                       Row(
                         children: [
-                          Expanded(child: _SummaryBox(title: 'TOTAL', value: '$totalUsers', tag: 'Live DB', color: AppColors.brandTeal)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusTab = 'all'),
+                              child: _SummaryBox(title: 'TOTAL', value: '$totalUsers', tag: 'Live DB', color: AppColors.brandTeal, isSelected: _statusTab == 'all'),
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: _SummaryBox(title: 'ACTIVE', value: '$activeUsers', tag: 'Registered', color: AppColors.success)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusTab = 'active'),
+                              child: _SummaryBox(title: 'ACTIVE', value: '$activeUsers', tag: 'Registered', color: AppColors.success, isSelected: _statusTab == 'active'),
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: _SummaryBox(title: 'PENDING', value: '$pendingUsers', tag: 'Action Req', color: AppColors.warning)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusTab = 'pending'),
+                              child: _SummaryBox(title: 'PENDING', value: '$pendingUsers', tag: 'Action Req', color: AppColors.warning, isSelected: _statusTab == 'pending'),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -418,14 +441,19 @@ class _SummaryBox extends StatelessWidget {
   final String value;
   final String tag;
   final Color color;
+  final bool isSelected;
 
-  const _SummaryBox({required this.title, required this.value, required this.tag, required this.color});
+  const _SummaryBox({required this.title, required this.value, required this.tag, required this.color, this.isSelected = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isSelected ? 0.22 : 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isSelected ? color : Colors.transparent, width: 1.5),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
