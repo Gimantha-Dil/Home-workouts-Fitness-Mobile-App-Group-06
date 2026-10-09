@@ -144,24 +144,31 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   ...widget.workout.exercises.asMap().entries.map((entry) {
                     final idx = entry.key + 1;
                     final e = entry.value;
+
+                    final String workoutVideo = widget.workout.videoUrl ?? '';
+                    final String exerciseVideo = (e.videoUrl != null && e.videoUrl!.isNotEmpty)
+                        ? e.videoUrl!
+                        : workoutVideo;
+
+                    final exerciseWithVideo = Exercise(
+                      id: e.id,
+                      name: e.name,
+                      sets: e.sets,
+                      reps: e.reps,
+                      restSeconds: e.restSeconds,
+                      difficulty: e.difficulty,
+                      instructions: e.instructions,
+                      tip: e.tip,
+                      videoUrl: exerciseVideo,
+                    );
+
+                    final hasVideoUrl = exerciseVideo.trim().isNotEmpty && exerciseVideo.trim().startsWith('http');
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: AppCard(
                         padding: const EdgeInsets.all(12),
                         onTap: () {
-                          final exerciseWithVideo = (e.videoUrl != null && e.videoUrl!.isNotEmpty)
-                              ? e
-                              : Exercise(
-                                  id: e.id,
-                                  name: e.name,
-                                  sets: e.sets,
-                                  reps: e.reps,
-                                  restSeconds: e.restSeconds,
-                                  difficulty: e.difficulty,
-                                  instructions: e.instructions,
-                                  tip: e.tip,
-                                  videoUrl: widget.workout.videoUrl,
-                                );
                           Navigator.of(context).push(
                             MaterialPageRoute(builder: (_) => ExerciseDetailsScreen(exercise: exerciseWithVideo)),
                           );
@@ -181,7 +188,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                   Row(
                                     children: [
                                       Text(e.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                      if (e.videoUrl != null && e.videoUrl!.isNotEmpty || (widget.workout.videoUrl != null && widget.workout.videoUrl!.isNotEmpty)) ...[
+                                      if (hasVideoUrl) ...[
                                         const SizedBox(width: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
@@ -191,7 +198,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                             children: [
                                               Icon(Icons.play_circle_fill, size: 10, color: AppColors.brandTeal),
                                               SizedBox(width: 2),
-                                              Text('VIDEO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                              Text('TRAINER VIDEO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                                             ],
                                           ),
                                         ),

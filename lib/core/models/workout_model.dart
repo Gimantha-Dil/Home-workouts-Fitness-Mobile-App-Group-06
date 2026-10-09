@@ -28,10 +28,12 @@ class Exercise {
       'sets': sets,
       'reps': reps,
       'restSeconds': restSeconds,
+      'rest_seconds': restSeconds,
       'difficulty': difficulty,
       'instructions': instructions,
       'tip': tip,
       'videoUrl': videoUrl,
+      'video_url': videoUrl,
     };
   }
 
@@ -48,8 +50,8 @@ class Exercise {
               : (int.tryParse(map['restSeconds']?.toString() ?? '') ?? 30)),
       difficulty: map['difficulty']?.toString() ?? 'Beginner',
       instructions: map['instructions'] is List
-          ? List<String>.from(map['instructions'].map((e) => e.toString()))
-          : [],
+          ? List<String>.from(map['instructions'])
+          : (map['instructions'] != null ? [map['instructions'].toString()] : []),
       tip: map['tip']?.toString() ?? '',
       videoUrl: map['videoUrl']?.toString() ?? map['video_url']?.toString(),
     );
@@ -66,6 +68,7 @@ class Workout {
   final String status;
   final String imageUrl;
   final String? videoUrl;
+  final String createdByName;
   final List<Exercise> exercises;
 
   bool get hasExercises => exercises.isNotEmpty;
@@ -83,6 +86,7 @@ class Workout {
     this.status = 'Draft',
     this.imageUrl = 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
     this.videoUrl,
+    this.createdByName = 'Coach Dinith',
     this.exercises = const [],
   });
 
@@ -100,6 +104,9 @@ class Workout {
       'imageUrl': imageUrl,
       'video_url': videoUrl,
       'videoUrl': videoUrl,
+      'createdByName': createdByName,
+      'created_by_name': createdByName,
+      'authorName': createdByName,
       'exercises': exercises.map((e) => e.toMap()).toList(),
     };
   }
@@ -123,6 +130,14 @@ class Workout {
       return 20;
     }
 
+    final rawAuthor = map['createdByName']?.toString() ??
+        map['created_by_name']?.toString() ??
+        map['authorName']?.toString();
+
+    final authorName = (rawAuthor != null && rawAuthor.trim().isNotEmpty)
+        ? rawAuthor.trim()
+        : 'Coach Dinith';
+
     return Workout(
       id: map['id']?.toString() ?? '',
       title: map['title']?.toString() ?? 'Untitled Workout',
@@ -133,6 +148,7 @@ class Workout {
       status: map['status']?.toString() ?? 'Draft',
       imageUrl: map['image_url']?.toString() ?? map['imageUrl']?.toString() ?? 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
       videoUrl: map['video_url']?.toString() ?? map['videoUrl']?.toString(),
+      createdByName: authorName,
       exercises: list,
     );
   }

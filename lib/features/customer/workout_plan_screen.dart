@@ -145,6 +145,8 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
                   else
                     ...workouts.map((w) {
                       final isFirst = w == workouts.first;
+                      final trainerName = w.createdByName.isNotEmpty ? w.createdByName : 'Head Coach';
+
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: AppCard(
@@ -176,7 +178,9 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 2),
-                                    Text('${w.exercises.length} exercises • ${w.level}', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                    Text('By $trainerName • ${w.level}', style: const TextStyle(fontSize: 11, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 2),
+                                    Text('${w.exercises.length} exercises • Rest 30s', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                     const SizedBox(height: 4),
                                     Row(
                                       children: [

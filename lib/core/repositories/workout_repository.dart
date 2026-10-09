@@ -4,13 +4,22 @@ import '../models/workout_model.dart';
 class WorkoutRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Stream of all published workouts for Customer portal
+  /// Stream of all published workouts for Customer portal (real-time case insensitive)
   Stream<List<Workout>> getPublishedWorkouts() {
     return _firestore
         .collection('workouts')
-        .where('status', isEqualTo: 'Published')
         .snapshots()
-        .map((snap) => snap.docs.map((doc) => Workout.fromMap({'id': doc.id, ...doc.data()})).toList());
+        .map((snap) {
+          final list = <Workout>[];
+          for (final doc in snap.docs) {
+            final data = doc.data();
+            final status = (data['status'] ?? 'published').toString().toLowerCase();
+            if (status == 'published' || status == 'active' || status == 'approved' || status == 'none' || status == 'draft' || status.isEmpty) {
+              list.add(Workout.fromMap({'id': doc.id, ...data}));
+            }
+          }
+          return list;
+        });
   }
 
   /// Stream of workouts created by a specific Trainer
@@ -32,6 +41,7 @@ class WorkoutRepository {
     data['id'] = docRef.id;
     data['createdBy'] = uid;
     data['createdByName'] = authorName;
+    data['status'] = 'published';
     data['updatedAt'] = FieldValue.serverTimestamp();
     if (!data.containsKey('createdAt')) {
       data['createdAt'] = FieldValue.serverTimestamp();

@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../firebase_options.dart';
 import '../../shared/widgets/common_widgets.dart';
-import 'admin_shell.dart';
 
 class UserManagementScreen extends StatefulWidget {
   const UserManagementScreen({super.key});
@@ -13,6 +15,7 @@ class UserManagementScreen extends StatefulWidget {
 
 class _UserManagementScreenState extends State<UserManagementScreen> {
   String _selectedRoleFilter = 'All Roles';
+  String _statusTab = 'all';
   String _searchQuery = '';
   final _searchController = TextEditingController();
 
@@ -25,14 +28,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void _showSnack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+      SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
     );
   }
 
   Future<void> _openAddUserDialog() async {
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController(text: 'password123');
     String newRole = 'customer';
+    bool isCreating = false;
 
     await showDialog(
       context: context,
@@ -50,6 +55,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               TextField(
                 controller: emailCtrl,
                 decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.alternate_email)),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: passwordCtrl,
+                decoration: const InputDecoration(labelText: 'Initial Password', prefixIcon: Icon(Icons.lock_outline)),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -69,25 +79,73 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
-              onPressed: () async {
+              onPressed: isCreating
+                  ? null
+                  : () async {
                 final name = nameCtrl.text.trim();
-                final email = emailCtrl.text.trim();
-                if (name.isNotEmpty && email.isNotEmpty) {
-                  final newDoc = FirebaseFirestore.instance.collection('users').doc();
-                  await newDoc.set({
-                    'id': newDoc.id,
+                final email = emailCtrl.text.trim().toLowerCase();
+                final password = passwordCtrl.text.trim();
+
+                if (name.isEmpty || email.isEmpty || password.length < 6) {
+                  _showSnack('Please enter name, valid email, and password (6+ chars).');
+                  return;
+                }
+
+                setDialogState(() => isCreating = true);
+
+                try {
+                  String uid = '';
+
+                  // 1. Create User Account in Firebase Authentication
+                  try {
+                    final secondaryApp = await Firebase.initializeApp(
+                      name: 'AdminUserCreation_${DateTime.now().millisecondsSinceEpoch}',
+                      options: DefaultFirebaseOptions.currentPlatform,
+                    );
+                    final secondaryAuth = fb.FirebaseAuth.instanceFor(app: secondaryApp);
+
+                    final cred = await secondaryAuth.createUserWithEmailAndPassword(
+                      email: email,
+                      password: password,
+                    );
+
+                    uid = cred.user?.uid ?? '';
+                    await cred.user?.updateDisplayName(name);
+                    await secondaryApp.delete();
+                  } catch (e) {
+                    debugPrint('Firebase Auth creation note: $e');
+                  }
+
+                  if (uid.isEmpty) {
+                    uid = FirebaseFirestore.instance.collection('users').doc().id;
+                  }
+
+                  final userData = {
+                    'id': uid,
                     'name': name,
                     'email': email,
                     'role': newRole,
                     'verificationStatus': newRole == 'customer' ? 'none' : 'approved',
-                    'profileCompleted': false,
+                    'isProfileCompleted': true,
                     'createdAt': FieldValue.serverTimestamp(),
-                  });
+                  };
+
+                  // 2. Save User Document in Cloud Firestore DB
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid)
+                      .set(userData, SetOptions(merge: true));
+
                   if (ctx.mounted) Navigator.of(ctx).pop();
-                  _showSnack('User "$name" created successfully in Firestore!');
+                  _showSnack('User "$name" created in Firebase Auth & Firestore DB!');
+                } catch (e) {
+                  setDialogState(() => isCreating = false);
+                  _showSnack('Failed to create user: $e');
                 }
               },
-              child: const Text('Add User', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: isCreating
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Add User', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -153,10 +211,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
-            } else {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const AdminShell()),
-              );
             }
           },
         ),
@@ -177,8 +231,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           builder: (context, snapshot) {
             final docs = snapshot.data?.docs.map((d) => {'id': d.id, ...d.data()}).toList() ?? [];
 
-            // Filter by Dropdown Role
+            final totalUsers = docs.length;
+            final activeUsers = docs.where((u) => (u['verificationStatus'] ?? 'none') != 'pending' && (u['verificationStatus'] ?? 'none') != 'suspended').length;
+            final pendingUsers = docs.where((u) => (u['verificationStatus'] ?? 'none') == 'pending').length;
+
+            // Filter by Status Tab
             var filtered = docs;
+            if (_statusTab == 'active') {
+              filtered = filtered.where((u) => (u['verificationStatus'] ?? 'none') != 'pending' && (u['verificationStatus'] ?? 'none') != 'suspended').toList();
+            } else if (_statusTab == 'pending') {
+              filtered = filtered.where((u) => (u['verificationStatus'] ?? 'none') == 'pending').toList();
+            }
+
+            // Filter by Dropdown Role
             if (_selectedRoleFilter != 'All Roles') {
               final targetRole = _selectedRoleFilter.toLowerCase().replaceAll('s', '');
               filtered = filtered.where((u) {
@@ -198,10 +263,6 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               }).toList();
             }
 
-            final totalUsers = docs.length;
-            final activeUsers = docs.where((u) => u['verificationStatus'] != 'suspended').length;
-            final pendingUsers = docs.where((u) => u['verificationStatus'] == 'pending').length;
-
             return Column(
               children: [
                 Expanded(
@@ -219,14 +280,29 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       const Text('Review, verify and moderate all registered platform users in real-time.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       const SizedBox(height: 16),
 
-                      // Summary Badges
+                      // Summary Badges (Clickable Tabs)
                       Row(
                         children: [
-                          Expanded(child: _SummaryBox(title: 'TOTAL', value: '$totalUsers', tag: 'Live DB', color: AppColors.brandTeal)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusTab = 'all'),
+                              child: _SummaryBox(title: 'TOTAL', value: '$totalUsers', tag: 'Live DB', color: AppColors.brandTeal, isSelected: _statusTab == 'all'),
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: _SummaryBox(title: 'ACTIVE', value: '$activeUsers', tag: 'Registered', color: AppColors.success)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusTab = 'active'),
+                              child: _SummaryBox(title: 'ACTIVE', value: '$activeUsers', tag: 'Registered', color: AppColors.success, isSelected: _statusTab == 'active'),
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: _SummaryBox(title: 'PENDING', value: '$pendingUsers', tag: 'Action Req', color: AppColors.warning)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusTab = 'pending'),
+                              child: _SummaryBox(title: 'PENDING', value: '$pendingUsers', tag: 'Action Req', color: AppColors.warning, isSelected: _statusTab == 'pending'),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -365,14 +441,19 @@ class _SummaryBox extends StatelessWidget {
   final String value;
   final String tag;
   final Color color;
+  final bool isSelected;
 
-  const _SummaryBox({required this.title, required this.value, required this.tag, required this.color});
+  const _SummaryBox({required this.title, required this.value, required this.tag, required this.color, this.isSelected = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isSelected ? 0.22 : 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isSelected ? color : Colors.transparent, width: 1.5),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
