@@ -11,6 +11,7 @@ import 'core/providers/notification_provider.dart';
 import 'core/providers/workout_provider.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/storage_service.dart';
+import 'core/services/supabase_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/admin/admin_shell.dart';
 import 'features/advisor/advisor_shell.dart';
@@ -40,6 +41,12 @@ void main() async {
     );
   } catch (e) {
     debugPrint('Firebase init error: $e');
+  }
+
+  try {
+    await SupabaseService.initializeSupabase();
+  } catch (e) {
+    debugPrint('Supabase init error: $e');
   }
 
   StorageService.initializeStorage().catchError((e) {

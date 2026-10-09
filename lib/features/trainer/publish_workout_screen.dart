@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/models/workout_model.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/repositories/workout_repository.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'trainer_shell.dart';
@@ -11,8 +12,15 @@ class PublishWorkoutScreen extends StatefulWidget {
   final String title;
   final String level;
   final String duration;
+  final String videoUrl;
 
-  const PublishWorkoutScreen({super.key, required this.title, required this.level, required this.duration});
+  const PublishWorkoutScreen({
+    super.key,
+    required this.title,
+    required this.level,
+    required this.duration,
+    this.videoUrl = '',
+  });
 
   @override
   State<PublishWorkoutScreen> createState() => _PublishWorkoutScreenState();
@@ -32,28 +40,45 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
 
     try {
       final repo = WorkoutRepository();
+      final newWorkoutId = 'w_${DateTime.now().millisecondsSinceEpoch}';
+
       final workout = Workout(
-        id: '',
+        id: newWorkoutId,
         title: widget.title,
         description: 'Custom trainer workout routine published to FitPulse catalog.',
         level: widget.level,
         durationMinutes: int.tryParse(widget.duration.replaceAll(RegExp(r'[^0-9]'), '')) ?? 20,
-        status: 'Published',
+        status: 'published',
+        videoUrl: widget.videoUrl,
         exercises: const [
           Exercise(id: 'ex1', name: 'Warm-up Arm Circles', sets: 1, reps: 10, restSeconds: 15),
           Exercise(id: 'ex2', name: 'Kneeling Push-ups', sets: 3, reps: 10, restSeconds: 30),
         ],
       );
 
+      // Save to Firestore via Repository
       await repo.saveWorkout(workout, user.id, user.name);
+
+      // Save/Sync to Supabase PostgreSQL Database 'workouts' table
+      await SupabaseService.saveWorkoutToSupabase(
+        workoutId: newWorkoutId,
+        title: workout.title,
+        level: workout.level,
+        durationMinutes: workout.durationMinutes,
+        status: 'published',
+        videoUrl: widget.videoUrl,
+      );
 
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Workout published successfully! Visible to all users.')),
+          const SnackBar(
+            content: Text('⚡ Workout & Video published successfully to Supabase!'),
+            backgroundColor: AppColors.brandTeal,
+          ),
         );
         navigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const TrainerShell()),
-              (route) => false,
+          (route) => false,
         );
       }
     } catch (e) {
