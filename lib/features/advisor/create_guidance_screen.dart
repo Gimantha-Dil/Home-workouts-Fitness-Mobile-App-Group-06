@@ -19,40 +19,54 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _categoryController = TextEditingController(text: 'Warm-up');
+  final _contentFocusNode = FocusNode();
+  TextSelection? _lastSelection;
   String _status = 'Draft';
   bool _saving = false;
   String? _uploadedImageUrl;
   String? _uploadedImageName;
 
   @override
+  void initState() {
+    super.initState();
+    _contentController.addListener(() {
+      if (_contentController.selection.isValid) {
+        _lastSelection = _contentController.selection;
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
     _categoryController.dispose();
+    _contentFocusNode.dispose();
     super.dispose();
   }
 
   void _applyFormatting(String wrapperBefore, [String? wrapperAfter]) {
     final text = _contentController.text;
-    final selection = _contentController.selection;
+    final selection = _lastSelection ?? _contentController.selection;
     final after = wrapperAfter ?? wrapperBefore;
 
-    if (selection.isValid && !selection.isCollapsed) {
-      final selectedText = selection.textInside(text);
+    if (selection.isValid && !selection.isCollapsed && selection.end <= text.length) {
+      final selectedText = text.substring(selection.start, selection.end);
       final newText = text.replaceRange(selection.start, selection.end, '$wrapperBefore$selectedText$after');
       _contentController.value = TextEditingValue(
         text: newText,
         selection: TextSelection.collapsed(offset: selection.start + wrapperBefore.length + selectedText.length + after.length),
       );
     } else {
-      final offset = _contentController.selection.baseOffset;
-      final insertIndex = offset >= 0 ? offset : text.length;
+      final offset = selection.isValid ? selection.baseOffset : text.length;
+      final insertIndex = offset >= 0 && offset <= text.length ? offset : text.length;
       final newText = text.replaceRange(insertIndex, insertIndex, '$wrapperBefore$after');
       _contentController.value = TextEditingValue(
         text: newText,
         selection: TextSelection.collapsed(offset: insertIndex + wrapperBefore.length),
       );
     }
+    _contentFocusNode.requestFocus();
   }
 
   Future<void> _pickImageFromGallery() async {
@@ -303,7 +317,6 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       _categoryController.text = selection;
                     },
                     fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                      // Keep text synced
                       controller.addListener(() {
                         _categoryController.text = controller.text;
                       });
@@ -376,6 +389,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                   ),
                   TextField(
                     controller: _contentController,
+                    focusNode: _contentFocusNode,
                     maxLines: 5,
                     decoration: const InputDecoration(
                       hintText: 'Write safety guidance content here...',
@@ -488,7 +502,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
-                            setState(() => _status = 'Publish');
+                            setState(() => _status == 'Publish' ? _status = 'Draft' : _status = 'Publish'); // wait, _status = 'Publish'
                             _saveGuidance('Publish');
                           },
                           child: Container(
