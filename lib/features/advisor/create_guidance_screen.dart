@@ -18,7 +18,7 @@ class CreateGuidanceScreen extends StatefulWidget {
 
 class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
+  final _contentController = FormattedTextEditingController();
   final _categoryController = TextEditingController(text: 'Warm-up');
   final _contentFocusNode = FocusNode();
   TextSelection? _lastSelection;
@@ -137,10 +137,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
     final user = context.read<AuthProvider>().currentUser;
     if (user?.verificationStatus != 'approved') {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account Pending Admin Approval: You cannot add or publish safety content until the admin approves your credentials.'),
-          backgroundColor: AppColors.danger,
-        ),
+        const SnackBar(content: Text('Admin approval is required before you can publish clinical guidance.')),
       );
       return;
     }
@@ -183,7 +180,14 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
             backgroundColor: AppColors.brandTeal,
           ),
         );
-        Navigator.of(context).pop();
+
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const AdvisorShell()),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -265,7 +269,6 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                   const SizedBox(height: 4),
                   TextField(
                     controller: _titleController,
-                    enabled: isApproved,
                     decoration: const InputDecoration(hintText: 'e.g. Warm-up Guide'),
                   ),
                   const SizedBox(height: 16),
@@ -292,7 +295,6 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       return TextField(
                         controller: controller,
                         focusNode: focusNode,
-                        enabled: isApproved,
                         decoration: const InputDecoration(
                           hintText: 'e.g. Warm-up or custom category',
                           suffixIcon: Icon(Icons.arrow_drop_down, size: 20),
@@ -311,7 +313,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                   ),
                   const SizedBox(height: 6),
 
-                  // Formatting Toolbar
+                  // Formatting Toolbar (Bold, Italic, Underline, Align/List, Double Quotes)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     decoration: const BoxDecoration(
@@ -324,17 +326,17 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                         IconButton(
                           icon: const Icon(Icons.format_bold, size: 20, color: AppColors.textPrimary),
                           tooltip: 'Bold (B)',
-                          onPressed: isApproved ? () => _applyFormatting('**') : null,
+                          onPressed: () => _applyFormatting('**'),
                         ),
                         IconButton(
                           icon: const Icon(Icons.format_italic, size: 20, color: AppColors.textPrimary),
                           tooltip: 'Italic (I)',
-                          onPressed: isApproved ? () => _applyFormatting('*') : null,
+                          onPressed: () => _applyFormatting('*'),
                         ),
                         IconButton(
                           icon: const Icon(Icons.format_underlined, size: 20, color: AppColors.textPrimary),
                           tooltip: 'Underline (U)',
-                          onPressed: isApproved ? () => _applyFormatting('<u>', '</u>') : null,
+                          onPressed: () => _applyFormatting('<u>', '</u>'),
                         ),
                         IconButton(
                           icon: Icon(
@@ -347,12 +349,12 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                             color: AppColors.textPrimary,
                           ),
                           tooltip: 'Align & List (Left, Center, Right, Justify)',
-                          onPressed: isApproved ? _cycleAlignment : null,
+                          onPressed: _cycleAlignment,
                         ),
                         IconButton(
                           icon: const Icon(Icons.format_quote, size: 20, color: AppColors.textPrimary),
                           tooltip: 'Double Quotes ("...")',
-                          onPressed: isApproved ? () => _applyFormatting('“', '”') : null,
+                          onPressed: () => _applyFormatting('“', '”'),
                         ),
                       ],
                     ),
@@ -362,7 +364,6 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                   TextField(
                     controller: _contentController,
                     focusNode: _contentFocusNode,
-                    enabled: isApproved,
                     textAlign: _textAlign,
                     maxLines: 8,
                     style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textPrimary),
@@ -414,14 +415,12 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                               const Text('Ready for publication • 2.4 MB', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                               const SizedBox(height: 6),
                               GestureDetector(
-                                onTap: isApproved
-                                    ? () {
+                                onTap: () {
                                   setState(() {
                                     _uploadedImageUrl = null;
                                     _uploadedImageName = null;
                                   });
-                                }
-                                    : null,
+                                },
                                 child: const Text('Remove image', style: TextStyle(fontSize: 10, color: AppColors.danger, fontWeight: FontWeight.bold)),
                               ),
                             ],
@@ -431,11 +430,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     ),
                   )
                       : InkWell(
-                    onTap: isApproved ? _pickOrUploadImage : () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Account Pending Admin Approval: Uploading images is locked until approved.')),
-                      );
-                    },
+                    onTap: _pickOrUploadImage,
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       height: 100,
@@ -465,14 +460,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
-                            if (!isApproved) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Account Pending Admin Approval: You cannot save drafts until approved.')),
-                              );
-                              return;
-                            }
                             setState(() => _status = 'Draft');
-                            _saveGuidance('Draft');
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -490,14 +478,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
-                            if (!isApproved) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Account Pending Admin Approval: You cannot publish content until approved.')),
-                              );
-                              return;
-                            }
                             setState(() => _status = 'Publish');
-                            _saveGuidance('Publish');
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
@@ -524,18 +505,20 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     const CircularProgressIndicator()
                   else
                     PrimaryButton(
-                      label: isApproved ? 'Save Guidance →' : 'Pending Admin Approval (Locked)',
-                      onPressed: isApproved
-                          ? () => _saveGuidance()
-                          : () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Account Pending Admin Approval: Publishing is locked until the admin approves your credentials.')),
-                        );
-                      },
+                      label: _status == 'Publish' ? 'Publish Guidance →' : 'Save Guidance →',
+                      onPressed: () => _saveGuidance(),
                     ),
                   const SizedBox(height: 8),
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => const AdvisorShell()),
+                        );
+                      }
+                    },
                     child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                   ),
                 ],
@@ -545,6 +528,81 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Custom TextEditingController that formats text IN REAL TIME INSIDE THE TEXTFIELD
+class FormattedTextEditingController extends TextEditingController {
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final spans = <TextSpan>[];
+    final textVal = text;
+
+    if (textVal.isEmpty) {
+      return TextSpan(style: style, children: const []);
+    }
+
+    final regExp = RegExp(r'(\*\*.*?\*\*|\*.*?\*|<u>.*?</u>|“.*?”|".*?")');
+    int lastMatchEnd = 0;
+
+    for (final match in regExp.allMatches(textVal)) {
+      if (match.start > lastMatchEnd) {
+        spans.add(TextSpan(
+          text: textVal.substring(lastMatchEnd, match.start),
+          style: style,
+        ));
+      }
+
+      final matchedText = match.group(0) ?? '';
+      if (matchedText.startsWith('**') && matchedText.endsWith('**') && matchedText.length >= 4) {
+        spans.add(TextSpan(
+          text: matchedText.substring(2, matchedText.length - 2),
+          style: (style ?? const TextStyle()).copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.brandTealDark,
+          ),
+        ));
+      } else if (matchedText.startsWith('*') && matchedText.endsWith('*') && matchedText.length >= 2) {
+        spans.add(TextSpan(
+          text: matchedText.substring(1, matchedText.length - 1),
+          style: (style ?? const TextStyle()).copyWith(
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (matchedText.startsWith('<u>') && matchedText.endsWith('</u>') && matchedText.length >= 7) {
+        spans.add(TextSpan(
+          text: matchedText.substring(3, matchedText.length - 4),
+          style: (style ?? const TextStyle()).copyWith(
+            decoration: TextDecoration.underline,
+          ),
+        ));
+      } else if ((matchedText.startsWith('“') && matchedText.endsWith('”')) || (matchedText.startsWith('"') && matchedText.endsWith('"'))) {
+        spans.add(TextSpan(
+          text: matchedText,
+          style: (style ?? const TextStyle()).copyWith(
+            color: AppColors.brandTeal,
+            fontWeight: FontWeight.w600,
+          ),
+        ));
+      } else {
+        spans.add(TextSpan(text: matchedText, style: style));
+      }
+
+      lastMatchEnd = match.end;
+    }
+
+    if (lastMatchEnd < textVal.length) {
+      spans.add(TextSpan(
+        text: textVal.substring(lastMatchEnd),
+        style: style,
+      ));
+    }
+
+    return TextSpan(style: style, children: spans);
   }
 }
 
