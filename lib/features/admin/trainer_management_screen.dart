@@ -318,11 +318,6 @@ class _TrainerManagementScreenState extends State<TrainerManagementScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      PrimaryButton(
-                        label: '+ Add Trainer',
-                        onPressed: () => _showAddTrainerDialog(context),
-                      ),
-                      const SizedBox(height: 14),
                       Row(
                         children: [
                           Expanded(
