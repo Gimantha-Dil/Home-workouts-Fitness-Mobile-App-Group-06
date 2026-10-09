@@ -1,6 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/models/workout_model.dart';
+import '../../core/providers/auth_provider.dart';
+import '../../core/repositories/workout_repository.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 
@@ -100,17 +103,53 @@ class _EditWorkoutScreenState extends State<EditWorkoutScreen> {
   }
 
   Future<void> _saveChanges() async {
-    if (widget.workout != null && widget.workout!.id.isNotEmpty) {
-      final dur = int.tryParse(_durationController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 15;
-      await FirebaseFirestore.instance.collection('workouts').doc(widget.workout!.id).update({
-        'title': _titleController.text.trim(),
-        'durationMinutes': dur,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    }
+    final title = _titleController.text.trim();
+    final dur = int.tryParse(_durationController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 15;
+
+    final workoutId = (widget.workout != null && widget.workout!.id.isNotEmpty)
+        ? widget.workout!.id
+        : 'w_${DateTime.now().millisecondsSinceEpoch}';
+
+    final exercisesList = _exercises.map((e) => Exercise(
+      id: 'ex_${DateTime.now().millisecondsSinceEpoch}',
+      name: e.$1,
+      sets: 3,
+      reps: 10,
+      restSeconds: 30,
+    )).toList();
+
+    final updatedWorkout = Workout(
+      id: workoutId,
+      title: title.isNotEmpty ? title : (widget.workout?.title ?? 'Updated Workout'),
+      description: widget.workout?.description ?? 'Custom trainer workout routine.',
+      level: widget.workout?.level ?? 'Beginner',
+      durationMinutes: dur,
+      goal: widget.workout?.goal ?? 'General Fitness',
+      status: widget.workout?.status ?? 'Published',
+      imageUrl: widget.workout?.imageUrl ?? 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
+      videoUrl: widget.workout?.videoUrl,
+      exercises: exercisesList,
+    );
+
+    final currentUser = context.read<AuthProvider>().currentUser;
+
+    // Save/Update in Supabase PostgreSQL Database 'workouts' table
+    await SupabaseService.saveWorkoutToSupabase(workout: updatedWorkout);
+
+    // Also sync to Firestore if user repository is connected
+    try {
+      if (currentUser != null) {
+        final repo = WorkoutRepository();
+        await repo.saveWorkout(updatedWorkout, currentUser.id, currentUser.name);
+      }
+    } catch (_) {}
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Workout updated successfully!')),
+        const SnackBar(
+          content: Text('⚡ Workout Title & Duration updated in Supabase!'),
+          backgroundColor: AppColors.brandTeal,
+        ),
       );
       Navigator.of(context).pop();
     }
