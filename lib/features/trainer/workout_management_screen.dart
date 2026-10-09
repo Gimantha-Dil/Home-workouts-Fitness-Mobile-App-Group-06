@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/models/workout_model.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
@@ -29,8 +31,6 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().currentUser;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -110,8 +110,8 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: const Color(0xFFFCA5A5)),
                           ),
-                          child: Row(
-                            children: const [
+                          child: const Row(
+                            children: [
                               Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
                               SizedBox(width: 8),
                               Expanded(

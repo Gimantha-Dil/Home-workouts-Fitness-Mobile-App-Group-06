@@ -31,7 +31,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   final _setsController = TextEditingController(text: '3');
   final _repsController = TextEditingController(text: '10');
   final _restController = TextEditingController(text: '30');
-  String _exerciseDifficulty = 'Beginner';
+  final String _exerciseDifficulty = 'Beginner';
 
   // Step 3 - instructions & tips
   final List<TextEditingController> _instructionControllers = [
@@ -187,15 +187,21 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
     if (_step < 3) {
       setState(() => _step++);
     } else {
+      final exerciseName = _exerciseNameController.text.isEmpty ? 'Kneeling Push-ups' : _exerciseNameController.text;
+      final sets = int.tryParse(_setsController.text) ?? 3;
+      final reps = int.tryParse(_repsController.text) ?? 10;
+      final rest = int.tryParse(_restController.text) ?? 60;
+      final instructions = _instructionControllers.map((c) => c.text).where((t) => t.isNotEmpty).toList();
+
       // Build full exercise object
       final exercise = Exercise(
         id: 'e_${DateTime.now().millisecondsSinceEpoch}',
-        name: _exerciseNameController.text.isEmpty ? 'Kneeling Push-ups' : _exerciseNameController.text,
-        sets: int.tryParse(_setsController.text) ?? 3,
-        reps: int.tryParse(_repsController.text) ?? 10,
-        restSeconds: int.tryParse(_restController.text) ?? 60,
+        name: exerciseName,
+        sets: sets,
+        reps: reps,
+        restSeconds: rest,
         difficulty: _exerciseDifficulty,
-        instructions: _instructionControllers.map((c) => c.text).where((t) => t.isNotEmpty).toList(),
+        instructions: instructions,
         tip: _tipController.text,
         videoUrl: _videoUrl,
       );
@@ -495,8 +501,8 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
+          const Row(
+            children: [
               Icon(Icons.tune, size: 18, color: Color(0xFF0F172A)),
               SizedBox(width: 8),
               Text(
@@ -512,9 +518,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           const SizedBox(height: 16),
 
           // Workout Title
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text(
                 'Workout Title',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
@@ -751,8 +757,8 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Icon(Icons.remove_red_eye_outlined, size: 18, color: Color(0xFF0F172A)),
                   SizedBox(width: 8),
                   Text(
@@ -931,16 +937,16 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           const SizedBox(height: 12),
 
           // Author Footer Row
-          Row(
+          const Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 16,
                 backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop'),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
                     'Coach Alex Carter',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
@@ -951,9 +957,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                   ),
                 ],
               ),
-              const Spacer(),
+              Spacer(),
               Row(
-                children: const [
+                children: [
                   Icon(Icons.verified, size: 14, color: Color(0xFF475569)),
                   SizedBox(width: 4),
                   Text(
@@ -1015,9 +1021,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFF34D399)),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
+                        children: [
                           Icon(Icons.circle, size: 6, color: Color(0xFF34D399)),
                           SizedBox(width: 4),
                           Text('Form Guidance Validated', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -1044,9 +1050,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Column(
+                    const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text('SELECTED VARIANT', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white70, letterSpacing: 0.5)),
                         SizedBox(height: 2),
                         Text('Knee Push-Up Cadence', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
@@ -1084,8 +1090,8 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Icon(Icons.unfold_more, size: 16, color: Color(0xFF64748B)),
                   SizedBox(width: 6),
                   Text('EXERCISE MOVEMENT TITLE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.5)),
@@ -1112,9 +1118,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text('● Bodyweight Compound', style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
                   Text('Change Movement ⇅', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                 ],
@@ -1137,9 +1143,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 ),
                 child: Column(
                   children: [
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.swap_horiz, size: 14, color: Color(0xFF64748B)),
                         SizedBox(width: 4),
                         Text('TARGET SETS', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.3)),
@@ -1197,9 +1203,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 ),
                 child: Column(
                   children: [
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         Icon(Icons.bolt, size: 14, color: Color(0xFF64748B)),
                         SizedBox(width: 4),
                         Text('REPS / SET', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF64748B), letterSpacing: 0.3)),
@@ -1264,8 +1270,8 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: const [
+                  const Row(
+                    children: [
                       Icon(Icons.timer_outlined, size: 16, color: Color(0xFF0F172A)),
                       SizedBox(width: 6),
                       Text('Rest Time Cadence', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
@@ -1316,9 +1322,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text('🎧 ATP Recovery: 85%', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
                   Text('Optimal Aerobic Reset', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
                 ],
@@ -1339,18 +1345,18 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text('🧍 Target Muscle Groups', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                   Text('+ Add Group', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                 ],
               ),
               const SizedBox(height: 10),
-              Wrap(
+              const Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: const [
+                children: [
                   _MuscleChipItem(label: '☉ Chest / Pectoralis', bg: Color(0xFFECFDF5), textCol: Color(0xFF047857), borderCol: Color(0xFFA7F3D0)),
                   _MuscleChipItem(label: '☉ Triceps Brachii', bg: Color(0xFFE0F2FE), textCol: Color(0xFF0284C7), borderCol: Color(0xFFBAE6FD)),
                   _MuscleChipItem(label: '☉ Anterior Deltoid', bg: Color(0xFFFEF3C7), textCol: Color(0xFFD97706), borderCol: Color(0xFFFDE68A)),
@@ -1404,10 +1410,10 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 child: const Icon(Icons.lightbulb_outline, size: 16, color: Color(0xFF92400E)),
               ),
               const SizedBox(width: 10),
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text('Coach Clinical Advisory ✔', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
                     SizedBox(height: 2),
                     Text(
@@ -1441,10 +1447,10 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 child: const Icon(Icons.favorite_outline, size: 16, color: Color(0xFF991B1B)),
               ),
               const SizedBox(width: 10),
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text('Pulse Zone Threshold', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF991B1B))),
                     SizedBox(height: 1),
                     Text('Target: 115 - 138 BPM', style: TextStyle(fontSize: 10, color: Color(0xFFB91C1C))),
@@ -1535,9 +1541,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                     border: Border.all(color: AppColors.brandTeal, width: 1.5),
                   ),
                   child: _isUploadingVideo
-                      ? Column(
+                      ? const Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
+                          children: [
                             CircularProgressIndicator(color: AppColors.brandTeal),
                             SizedBox(height: 12),
                             Text(
@@ -1665,26 +1671,6 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _chip(String label, String selected, ValueChanged<String> onSelect) {
-    final active = selected == label;
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: GestureDetector(
-        onTap: () => onSelect(label),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? AppColors.brandTeal : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: active ? AppColors.brandTeal : const Color(0xFFE2E8F0)),
-          ),
-          child: Text(label, style: TextStyle(color: active ? Colors.white : AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold)),
-        ),
       ),
     );
   }
