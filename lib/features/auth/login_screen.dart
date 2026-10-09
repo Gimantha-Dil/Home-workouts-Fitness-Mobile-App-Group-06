@@ -216,8 +216,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             onTap: () => setState(() => _isSignUp = false),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 10),
+                              alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: !_isSignUp ? Colors.white : Colors.transparent,
+                                color: !_isSignUp ? primary : Colors.transparent,
                                 borderRadius: BorderRadius.circular(10),
                                 boxShadow: !_isSignUp
                                     ? [
@@ -234,7 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
-                                  color: !_isSignUp ? primary : AppColors.textSecondary,
+                                  color: !_isSignUp ? Colors.white : AppColors.textSecondary,
                                 ),
                               ),
                             ),
@@ -245,11 +246,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             onTap: () => setState(() => _isSignUp = true),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 10),
+                              alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: _isSignUp ? Colors.white : Colors.transparent,
+                                color: _isSignUp ? primary : Colors.transparent,
                                 borderRadius: BorderRadius.circular(10),
-                                border: _isSignUp
-                                    ? Border.all(color: primary, width: 1.5)
+                                boxShadow: _isSignUp
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.05),
+                                          blurRadius: 4,
+                                        ),
+                                      ]
                                     : null,
                               ),
                               child: Text(
@@ -258,7 +265,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
-                                  color: _isSignUp ? primary : AppColors.textSecondary,
+                                  color: _isSignUp ? Colors.white : AppColors.textSecondary,
                                 ),
                               ),
                             ),
