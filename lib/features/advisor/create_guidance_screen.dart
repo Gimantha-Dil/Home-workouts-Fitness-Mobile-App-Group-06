@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -16,10 +17,11 @@ class CreateGuidanceScreen extends StatefulWidget {
 
 class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
+  final _contentController = FormattedTextEditingController();
   final _categoryController = TextEditingController(text: 'Warm-up');
   final _contentFocusNode = FocusNode();
   TextSelection? _lastSelection;
+  TextAlign _textAlign = TextAlign.left;
   String _status = 'Draft';
   bool _saving = false;
   String? _uploadedImageUrl;
@@ -32,6 +34,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
       if (_contentController.selection.isValid) {
         _lastSelection = _contentController.selection;
       }
+      setState(() {});
     });
   }
 
@@ -66,6 +69,27 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
       );
     }
     _contentFocusNode.requestFocus();
+    setState(() {});
+  }
+
+  void _cycleAlignment() {
+    setState(() {
+      if (_textAlign == TextAlign.left) {
+        _textAlign = TextAlign.center;
+      } else if (_textAlign == TextAlign.center) {
+        _textAlign = TextAlign.right;
+      } else if (_textAlign == TextAlign.right) {
+        _textAlign = TextAlign.justify;
+      } else {
+        _textAlign = TextAlign.left;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Text Alignment: ${_textAlign.name.toUpperCase()}'),
+        duration: const Duration(milliseconds: 800),
+      ),
+    );
   }
 
   Future<void> _pickImageFromGallery() async {
@@ -89,8 +113,22 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   Future<void> _pickOrUploadImage() async {
     setState(() => _saving = true);
     try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        final name = file.name;
+        final List<int> bytes = List<int>.from(file.bytes ?? []);
+        final url = await SupabaseService.uploadUserPhoto(fileName: name, photoBytes: bytes);
+        setState(() {
+          _uploadedImageUrl = url;
+          _uploadedImageName = name;
+        });
+      } else {
+        await _pickImageFromGallery();
+      }
+    } catch (_) {
       await _pickImageFromGallery();
-    } catch (_) {}
+    }
     setState(() => _saving = false);
   }
 
@@ -136,7 +174,10 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Safety guidance saved as ${savingStatus == 'Publish' ? 'Published' : 'Draft'} successfully!')),
+          SnackBar(
+            content: Text('Safety guidance saved as ${savingStatus == 'Publish' ? 'Published' : 'Draft'} successfully!'),
+            backgroundColor: AppColors.brandTeal,
+          ),
         );
         Navigator.of(context).pop();
       }
@@ -173,7 +214,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
           children: [
             Text('Create Safety Guidance', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             SizedBox(width: 6),
-            _Badge(text: '• H04', color: AppColors.brandTeal),
+            _Badge(text: '• REAL-TIME EDITOR', color: AppColors.brandTeal),
           ],
         ),
       ),
@@ -193,8 +234,8 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFFFCA5A5)),
                       ),
-                      child: Row(
-                        children: const [
+                      child: const Row(
+                        children: [
                           Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
                           SizedBox(width: 8),
                           Expanded(
@@ -206,11 +247,11 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                         ],
                       ),
                     ),
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Title *', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-                      Text('0/80', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                      const Text('Title *', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                      Text('${_titleController.text.length}/80', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -251,15 +292,16 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Content *', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-                      Text('Markdown supported', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
+                      const Text('Content *', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                      Text('${_contentController.text.length} chars', style: const TextStyle(fontSize: 9, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  // Editor Toolbar with working formatting options
+                  const SizedBox(height: 6),
+
+                  // Formatting Toolbar (Bold, Italic, Underline, Align/List, Double Quotes)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     decoration: const BoxDecoration(
@@ -267,54 +309,58 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       borderRadius: BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
                     ),
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.format_bold, size: 18, color: AppColors.textPrimary),
-                          tooltip: 'Bold',
+                          icon: const Icon(Icons.format_bold, size: 20, color: AppColors.textPrimary),
+                          tooltip: 'Bold (B)',
                           onPressed: () => _applyFormatting('**'),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.format_italic, size: 18, color: AppColors.textPrimary),
-                          tooltip: 'Italic',
+                          icon: const Icon(Icons.format_italic, size: 20, color: AppColors.textPrimary),
+                          tooltip: 'Italic (I)',
                           onPressed: () => _applyFormatting('*'),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.format_underlined, size: 18, color: AppColors.textPrimary),
-                          tooltip: 'Underline',
+                          icon: const Icon(Icons.format_underlined, size: 20, color: AppColors.textPrimary),
+                          tooltip: 'Underline (U)',
                           onPressed: () => _applyFormatting('<u>', '</u>'),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.format_list_bulleted, size: 18, color: AppColors.textPrimary),
-                          tooltip: 'Bullet List',
-                          onPressed: () => _applyFormatting('- '),
+                          icon: Icon(
+                            _textAlign == TextAlign.center
+                                ? Icons.format_align_center
+                                : (_textAlign == TextAlign.right
+                                ? Icons.format_align_right
+                                : (_textAlign == TextAlign.justify ? Icons.format_align_justify : Icons.format_align_left)),
+                            size: 20,
+                            color: AppColors.textPrimary,
+                          ),
+                          tooltip: 'Align & List (Left, Center, Right, Justify)',
+                          onPressed: _cycleAlignment,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.format_quote, size: 18, color: AppColors.textPrimary),
-                          tooltip: 'Quote / Blockquote',
-                          onPressed: () => _applyFormatting('> '),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.format_align_justify, size: 18, color: AppColors.textPrimary),
-                          tooltip: 'Justify Alignment',
-                          onPressed: () => _applyFormatting('<div align="justify">', '</div>'),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.format_quote_rounded, size: 18, color: AppColors.textPrimary),
+                          icon: const Icon(Icons.format_quote, size: 20, color: AppColors.textPrimary),
                           tooltip: 'Double Quotes ("...")',
                           onPressed: () => _applyFormatting('“', '”'),
                         ),
                       ],
                     ),
                   ),
+
+                  // Direct Formatted Word-Style TextField
                   TextField(
                     controller: _contentController,
                     focusNode: _contentFocusNode,
-                    maxLines: 5,
+                    textAlign: _textAlign,
+                    maxLines: 8,
+                    style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textPrimary),
                     decoration: const InputDecoration(
-                      hintText: 'Write safety guidance content here...',
+                      hintText: 'Type safety guidance text here...',
                       border: OutlineInputBorder(borderRadius: BorderRadius.only(bottomLeft: Radius.circular(10), bottomRight: Radius.circular(10))),
                     ),
                   ),
+
                   const SizedBox(height: 16),
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -327,73 +373,73 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                   // Click Upload Box / Preview Box
                   _uploadedImageUrl != null
                       ? Container(
-                          height: 110,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9FAFB),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.brandTeal),
+                    height: 110,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.brandTeal),
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            _uploadedImageUrl!,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 40, color: AppColors.textSecondary),
                           ),
-                          child: Row(
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(width: 12),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  _uploadedImageUrl!,
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 40, color: AppColors.textSecondary),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(_uploadedImageName ?? 'guidance_image.jpg', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                    const SizedBox(height: 2),
-                                    const Text('Ready for publication • 2.4 MB', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                                    const SizedBox(height: 6),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _uploadedImageUrl = null;
-                                          _uploadedImageName = null;
-                                        });
-                                      },
-                                      child: const Text('Remove image', style: TextStyle(fontSize: 10, color: AppColors.danger, fontWeight: FontWeight.bold)),
-                                    ),
-                                  ],
-                                ),
+                              Text(_uploadedImageName ?? 'guidance_image.jpg', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              const SizedBox(height: 2),
+                              const Text('Ready for publication • 2.4 MB', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _uploadedImageUrl = null;
+                                    _uploadedImageName = null;
+                                  });
+                                },
+                                child: const Text('Remove image', style: TextStyle(fontSize: 10, color: AppColors.danger, fontWeight: FontWeight.bold)),
                               ),
                             ],
                           ),
-                        )
-                      : InkWell(
-                          onTap: _pickOrUploadImage,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            height: 100,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF0FDF4),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFCCFBF1), style: BorderStyle.solid),
-                            ),
-                            child: _saving
-                                ? const Center(child: CircularProgressIndicator())
-                                : const Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      CircleAvatar(radius: 16, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.cloud_upload_outlined, color: AppColors.brandTeal, size: 18)),
-                                      SizedBox(height: 6),
-                                      Text('Click to upload image to Supabase', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                                      Text('or drag and drop your media file', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-                                    ],
-                                  ),
-                          ),
                         ),
+                      ],
+                    ),
+                  )
+                      : InkWell(
+                    onTap: _pickOrUploadImage,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFCCFBF1), style: BorderStyle.solid),
+                      ),
+                      child: _saving
+                          ? const Center(child: CircularProgressIndicator())
+                          : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(radius: 16, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.cloud_upload_outlined, color: AppColors.brandTeal, size: 18)),
+                          SizedBox(height: 6),
+                          Text('Click to upload image to Supabase', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                          Text('or drag and drop your media file', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   const Text('Status', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                   const SizedBox(height: 6),
@@ -421,7 +467,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       Expanded(
                         child: GestureDetector(
                           onTap: () {
-                            setState(() => _status == 'Publish' ? _status = 'Draft' : _status = 'Publish'); // wait, _status = 'Publish'
+                            setState(() => _status = 'Publish');
                             _saveGuidance('Publish');
                           },
                           child: Container(
@@ -449,7 +495,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     const CircularProgressIndicator()
                   else
                     PrimaryButton(
-                      label: 'Save Guidance →',
+                      label: _status == 'Publish' ? 'Publish Guidance →' : 'Save Guidance →',
                       onPressed: () => _saveGuidance(),
                     ),
                   const SizedBox(height: 8),
@@ -464,6 +510,81 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Custom TextEditingController that formats text IN REAL TIME INSIDE THE TEXTFIELD
+class FormattedTextEditingController extends TextEditingController {
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final spans = <TextSpan>[];
+    final textVal = text;
+
+    if (textVal.isEmpty) {
+      return TextSpan(style: style, children: const []);
+    }
+
+    final regExp = RegExp(r'(\*\*.*?\*\*|\*.*?\*|<u>.*?</u>|“.*?”|".*?")');
+    int lastMatchEnd = 0;
+
+    for (final match in regExp.allMatches(textVal)) {
+      if (match.start > lastMatchEnd) {
+        spans.add(TextSpan(
+          text: textVal.substring(lastMatchEnd, match.start),
+          style: style,
+        ));
+      }
+
+      final matchedText = match.group(0) ?? '';
+      if (matchedText.startsWith('**') && matchedText.endsWith('**') && matchedText.length >= 4) {
+        spans.add(TextSpan(
+          text: matchedText.substring(2, matchedText.length - 2),
+          style: (style ?? const TextStyle()).copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.brandTealDark,
+          ),
+        ));
+      } else if (matchedText.startsWith('*') && matchedText.endsWith('*') && matchedText.length >= 2) {
+        spans.add(TextSpan(
+          text: matchedText.substring(1, matchedText.length - 1),
+          style: (style ?? const TextStyle()).copyWith(
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (matchedText.startsWith('<u>') && matchedText.endsWith('</u>') && matchedText.length >= 7) {
+        spans.add(TextSpan(
+          text: matchedText.substring(3, matchedText.length - 4),
+          style: (style ?? const TextStyle()).copyWith(
+            decoration: TextDecoration.underline,
+          ),
+        ));
+      } else if ((matchedText.startsWith('“') && matchedText.endsWith('”')) || (matchedText.startsWith('"') && matchedText.endsWith('"'))) {
+        spans.add(TextSpan(
+          text: matchedText,
+          style: (style ?? const TextStyle()).copyWith(
+            color: AppColors.brandTeal,
+            fontWeight: FontWeight.w600,
+          ),
+        ));
+      } else {
+        spans.add(TextSpan(text: matchedText, style: style));
+      }
+
+      lastMatchEnd = match.end;
+    }
+
+    if (lastMatchEnd < textVal.length) {
+      spans.add(TextSpan(
+        text: textVal.substring(lastMatchEnd),
+        style: style,
+      ));
+    }
+
+    return TextSpan(style: style, children: spans);
   }
 }
 

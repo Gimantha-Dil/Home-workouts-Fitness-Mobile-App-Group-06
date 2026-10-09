@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'advisor_settings_screen.dart';
+import 'advisor_shell.dart';
 import 'cooldown_guidance_screen.dart';
 import 'exercise_precautions_screen.dart';
 import 'health_considerations_screen.dart';
@@ -39,16 +40,14 @@ class _SafetyContentScreenState extends State<SafetyContentScreen> {
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AdvisorShell()),
+              );
             }
           },
         ),
-        title: const Row(
-          children: [
-            Text('FITPULSE ADVISOR', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal, letterSpacing: 0.5)),
-            SizedBox(width: 8),
-            Text('Safety Content', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
+        title: const Text('Safety Content', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
