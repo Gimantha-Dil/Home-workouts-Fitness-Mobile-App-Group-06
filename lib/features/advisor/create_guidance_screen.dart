@@ -31,7 +31,14 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
     super.dispose();
   }
 
-  Future<void> _saveGuidance() async {
+  Future<void> _pickOrUploadImage() async {
+    setState(() {
+      _uploadedImageUrl = 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop';
+      _uploadedImageName = 'guidance_banner.jpg';
+    });
+  }
+
+  Future<void> _saveGuidance([String? forcedStatus]) async {
     final user = context.read<AuthProvider>().currentUser;
     if (user?.verificationStatus != 'approved') {
       ScaffoldMessenger.of(context).showSnackBar(
