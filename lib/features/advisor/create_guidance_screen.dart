@@ -6,6 +6,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'advisor_shell.dart';
 
 class CreateGuidanceScreen extends StatefulWidget {
   const CreateGuidanceScreen({super.key});
@@ -166,6 +167,10 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AdvisorShell()),
+              );
             }
           },
         ),
