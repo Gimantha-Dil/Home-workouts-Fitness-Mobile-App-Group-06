@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/screens/notification_center_screen.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -92,19 +93,73 @@ class _TrainerManagementScreenState extends State<TrainerManagementScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Review Credentials: $name', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Email: $email'),
-            const SizedBox(height: 4),
-            Text('User ID: $uid'),
-            const SizedBox(height: 4),
-            Text('Current Status: ${status.toUpperCase()}'),
-            const SizedBox(height: 12),
-            const Text('Fitness Accreditation: Verified Documents', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-          ],
+        title: Text('Credentials & Proof: $name', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: SizedBox(
+          width: 400,
+          child: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+            future: FirebaseFirestore.instance.collection('verificationRequests').doc(uid).get(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final data = snapshot.data?.data() ?? {};
+              final experience = data['experienceYears'] ?? data['specialization'] ?? 'Not provided';
+              final socialLink = data['socialLink'] ?? data['workplace'] ?? 'None';
+              final List<dynamic> docUrls = data['documentUrls'] ?? data['identityDocuments'] ?? [];
+
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Email: $email', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text('User ID: $uid', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                    const SizedBox(height: 4),
+                    Text('Status: ${status.toUpperCase()}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: status == 'approved' ? AppColors.success : AppColors.warning)),
+                    const SizedBox(height: 14),
+                    const Text('SUBMITTED CREDENTIALS & PROOF:', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                    const SizedBox(height: 6),
+                    Text('• Experience / Specialization: $experience', style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text('• Social / Professional Link: $socialLink', style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 12),
+                    const Text('VERIFICATION DOCUMENTS (PROOF):', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                    const SizedBox(height: 6),
+                    if (docUrls.isEmpty)
+                      const Text('No uploaded proof documents found in request.', style: TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic))
+                    else
+                      ...docUrls.map((url) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: InkWell(
+                              onTap: () async {
+                                final uri = Uri.parse(url.toString());
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                }
+                              },
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.insert_drive_file, size: 16, color: AppColors.brandTeal),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      url.toString(),
+                                      style: const TextStyle(fontSize: 11, color: AppColors.info, decoration: TextDecoration.underline),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.open_in_new, size: 14, color: AppColors.info),
+                                ],
+                              ),
+                            ),
+                          )),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
         actions: [
           TextButton(
@@ -230,16 +285,36 @@ class _TrainerManagementScreenState extends State<TrainerManagementScreen> {
                       const Text('Review qualifications, pending approvals, and active coaches in real-time.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       const SizedBox(height: 16),
 
-                      // Summary Cards
+                      // Summary Cards (Clickable Tabs)
                       Row(
                         children: [
-                          Expanded(child: _SummaryBox(title: 'TOTAL', value: '$totalTrainers', tag: 'Coaches', color: AppColors.brandTeal)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusFilter = 'All Status'),
+                              child: _SummaryBox(title: 'TOTAL', value: '$totalTrainers', tag: 'Coaches', color: AppColors.brandTeal, isSelected: _statusFilter == 'All Status'),
+                            ),
+                          ),
                           const SizedBox(width: 6),
-                          Expanded(child: _SummaryBox(title: 'APPROVED', value: '$approvedTrainers', tag: 'Verified', color: AppColors.success)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusFilter = 'Approved'),
+                              child: _SummaryBox(title: 'APPROVED', value: '$approvedTrainers', tag: 'Verified', color: AppColors.success, isSelected: _statusFilter == 'Approved'),
+                            ),
+                          ),
                           const SizedBox(width: 6),
-                          Expanded(child: _SummaryBox(title: 'PENDING', value: '$pendingTrainers', tag: 'Review', color: AppColors.warning)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusFilter = 'Pending'),
+                              child: _SummaryBox(title: 'PENDING', value: '$pendingTrainers', tag: 'Review', color: AppColors.warning, isSelected: _statusFilter == 'Pending'),
+                            ),
+                          ),
                           const SizedBox(width: 6),
-                          Expanded(child: _SummaryBox(title: 'REJECTED', value: '$rejectedTrainers', tag: 'Closed', color: AppColors.danger)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _statusFilter = 'Rejected'),
+                              child: _SummaryBox(title: 'REJECTED', value: '$rejectedTrainers', tag: 'Closed', color: AppColors.danger, isSelected: _statusFilter == 'Rejected'),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -383,14 +458,19 @@ class _SummaryBox extends StatelessWidget {
   final String value;
   final String tag;
   final Color color;
+  final bool isSelected;
 
-  const _SummaryBox({required this.title, required this.value, required this.tag, required this.color});
+  const _SummaryBox({required this.title, required this.value, required this.tag, required this.color, this.isSelected = false});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isSelected ? 0.22 : 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isSelected ? color : Colors.transparent, width: 1.5),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

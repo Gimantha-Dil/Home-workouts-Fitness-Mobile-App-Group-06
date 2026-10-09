@@ -211,6 +211,10 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AdminShell()),
+              );
             }
           },
         ),

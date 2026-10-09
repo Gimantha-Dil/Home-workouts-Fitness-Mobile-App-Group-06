@@ -21,6 +21,7 @@ import 'features/customer/onboarding_screen.dart';
 import 'features/customer/profile_setup_screen.dart';
 import 'features/customer/splash_screen.dart';
 import 'features/trainer/trainer_shell.dart';
+import 'shared/screens/pending_verification_screen.dart';
 import 'firebase_options.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -139,8 +140,14 @@ class _AppRootState extends State<AppRoot> {
         }
         return const CustomerShell();
       case UserRole.trainer:
+        if (user.verificationStatus != 'approved') {
+          return const PendingVerificationScreen();
+        }
         return const TrainerShell();
       case UserRole.advisor:
+        if (user.verificationStatus != 'approved') {
+          return const PendingVerificationScreen();
+        }
         return const AdvisorShell();
       case UserRole.admin:
         return const AdminShell();

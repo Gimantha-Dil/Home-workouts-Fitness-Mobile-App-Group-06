@@ -31,145 +31,15 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImageFromGallery() async {
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1080,
-        imageQuality: 80,
+  Future<void> _saveGuidance() async {
+    final user = context.read<AuthProvider>().currentUser;
+    if (user?.verificationStatus != 'approved') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Admin approval is required before you can publish clinical guidance.')),
       );
-      if (pickedFile != null) {
-        setState(() => _saving = true);
-        final bytes = await pickedFile.readAsBytes();
-        final user = context.read<AuthProvider>().currentUser;
-        final uid = user?.id ?? 'advisor';
-        final ext = pickedFile.name.contains('.') ? pickedFile.name.split('.').last : 'jpg';
-        final path = 'guidance/$uid/${DateTime.now().millisecondsSinceEpoch}.$ext';
-        final mimeType = ext == 'png' ? 'image/png' : ext == 'webp' ? 'image/webp' : 'image/jpeg';
-
-        await Supabase.instance.client.storage.from('user-photos').uploadBinary(
-          path,
-          Uint8List.fromList(bytes),
-          fileOptions: FileOptions(contentType: mimeType, upsert: true),
-        );
-
-        final publicUrl = Supabase.instance.client.storage.from('user-photos').getPublicUrl(path);
-
-        setState(() {
-          _uploadedImageUrl = publicUrl;
-          _uploadedImageName = pickedFile.name;
-          _saving = false;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Image successfully uploaded to Supabase (user-photos bucket)!'), duration: Duration(seconds: 2)),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload image to Supabase: $e')),
-        );
-      }
+      return;
     }
-  }
 
-  void _pickOrUploadImage() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Upload Safety Guidance Image', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 6),
-            const Text('Select an image source from your device gallery or presets.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.photo_library_outlined, color: AppColors.brandTeal)),
-              title: const Text('Upload from Device Gallery', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              subtitle: const Text('Browse photos & images on your device', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _pickImageFromGallery();
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFF3F4F6), child: Icon(Icons.image_outlined, color: AppColors.brandTeal)),
-              title: const Text('Choose Sample Clinical Graphic', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              subtitle: const Text('Sports medicine & physiotherapy banners', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                setState(() {
-                  _uploadedImageUrl = 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=600&auto=format&fit=crop';
-                  _uploadedImageName = 'clinical_warmup_banner.jpg';
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sample graphic loaded successfully!'), duration: Duration(seconds: 2)),
-                );
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const CircleAvatar(backgroundColor: Color(0xFFE0F2FE), child: Icon(Icons.link, color: AppColors.info)),
-              title: const Text('Enter Image URL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-              subtitle: const Text('Paste direct image link', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _showUrlInputDialog();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showUrlInputDialog() {
-    final urlController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Enter Image URL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: TextField(
-          controller: urlController,
-          decoration: const InputDecoration(hintText: 'https://example.com/image.jpg'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () {
-              final url = urlController.text.trim();
-              if (url.isNotEmpty) {
-                Navigator.of(ctx).pop();
-                setState(() {
-                  _uploadedImageUrl = url;
-                  _uploadedImageName = url.split('/').last;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Image loaded successfully!'), duration: Duration(seconds: 2)),
-                );
-              }
-            },
-            child: const Text('Add', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _saveGuidance([String? forcedStatus]) async {
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
     if (title.isEmpty) {
@@ -184,7 +54,6 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
     setState(() => _saving = true);
 
     try {
-      final user = context.read<AuthProvider>().currentUser;
       final uid = user?.id ?? '';
       final authorName = user?.name ?? 'Healthcare Advisor';
 
@@ -220,6 +89,9 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final isApproved = user?.verificationStatus == 'approved';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -248,6 +120,28 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  if (!isApproved)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Account Pending Admin Approval: You can view your dashboard, but publishing clinical guidance is locked until the admin verifies your credentials.',
+                              style: TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
