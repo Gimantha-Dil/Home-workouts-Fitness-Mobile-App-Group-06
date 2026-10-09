@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -18,6 +21,8 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   String _category = 'Warm-up';
   String _status = 'Draft';
   bool _saving = false;
+  String? _uploadedImageUrl;
+  String? _uploadedImageName;
 
   @override
   void dispose() {
@@ -44,6 +49,8 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
       return;
     }
 
+    final savingStatus = forcedStatus ?? _status;
+
     setState(() => _saving = true);
 
     try {
@@ -56,7 +63,8 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
         'title': title,
         'category': _category,
         'content': content,
-        'status': _status == 'Publish' ? 'Published' : 'Draft',
+        'imageUrl': _uploadedImageUrl ?? '',
+        'status': savingStatus == 'Publish' ? 'Published' : 'Draft',
         'createdBy': uid,
         'authorName': authorName,
         'createdAt': FieldValue.serverTimestamp(),
@@ -64,7 +72,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Guidance "$title" saved successfully in Firestore!')),
+          SnackBar(content: Text('Safety guidance saved as ${savingStatus == 'Publish' ? 'Published' : 'Draft'} successfully!')),
         );
         Navigator.of(context).pop();
       }
@@ -204,24 +212,76 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Drag & Drop Upload Box
-                  Container(
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFCCFBF1), style: BorderStyle.solid),
-                    ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(radius: 16, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.cloud_upload_outlined, color: AppColors.brandTeal, size: 18)),
-                        SizedBox(height: 6),
-                        Text('Click to upload image', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                        Text('or drag and drop your media file', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
+                  // Click Upload Box / Preview Box
+                  _uploadedImageUrl != null
+                      ? Container(
+                          height: 110,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.brandTeal),
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 12),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  _uploadedImageUrl!,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 40, color: AppColors.textSecondary),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_uploadedImageName ?? 'guidance_image.jpg', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                    const SizedBox(height: 2),
+                                    const Text('Ready for publication • 2.4 MB', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                    const SizedBox(height: 6),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _uploadedImageUrl = null;
+                                          _uploadedImageName = null;
+                                        });
+                                      },
+                                      child: const Text('Remove image', style: TextStyle(fontSize: 10, color: AppColors.danger, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : InkWell(
+                          onTap: _pickOrUploadImage,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            height: 100,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFCCFBF1), style: BorderStyle.solid),
+                            ),
+                            child: _saving
+                                ? const Center(child: CircularProgressIndicator())
+                                : const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircleAvatar(radius: 16, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.cloud_upload_outlined, color: AppColors.brandTeal, size: 18)),
+                                      SizedBox(height: 6),
+                                      Text('Click to upload image to Supabase', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                      Text('or drag and drop your media file', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
+                                    ],
+                                  ),
+                          ),
+                        ),
                   const SizedBox(height: 16),
                   const Text('Status', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                   const SizedBox(height: 6),
@@ -229,7 +289,10 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _status = 'Draft'),
+                          onTap: () {
+                            setState(() => _status = 'Draft');
+                            _saveGuidance('Draft');
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             alignment: Alignment.center,
@@ -245,7 +308,10 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _status = 'Publish'),
+                          onTap: () {
+                            setState(() => _status = 'Publish');
+                            _saveGuidance('Publish');
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             alignment: Alignment.center,
@@ -272,7 +338,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                   else
                     PrimaryButton(
                       label: 'Save Guidance →',
-                      onPressed: _saveGuidance,
+                      onPressed: () => _saveGuidance(),
                     ),
                   const SizedBox(height: 8),
                   TextButton(
