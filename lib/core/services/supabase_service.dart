@@ -3,12 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_role.dart';
 import '../models/workout_model.dart';
 
-/// Supabase Backend Integration (PostgreSQL DB, Storage Buckets, Auth)
+/// Supabase Backend Integration (Storage Buckets, Database, Auth)
 class SupabaseService {
   // Production Supabase Project Config
   static const String supabaseUrl = 'https://ctguxkodnxxntloshlls.supabase.co';
-  static const String supabasePublishableKey =
-      'sb_publishable_16YzWxaZ-YIn4bCH1D4ZcA_gK67V4-2';
+  static const String supabaseAnonKey = 'sb_publishable_16YzWxaZ-YIn4bCH1D4ZcA_gK67V4-2';
 
   static bool isInitialized = false;
 
@@ -17,7 +16,7 @@ class SupabaseService {
     try {
       await Supabase.initialize(
         url: supabaseUrl,
-        publishableKey: supabasePublishableKey, // replaces deprecated anonKey
+        publishableKey: supabaseAnonKey,
       );
       isInitialized = true;
       debugPrint('⚡ Supabase Initialized Successfully with Live Project Keys!');
@@ -26,7 +25,7 @@ class SupabaseService {
     }
   }
 
-  /// 📤 Storage: Upload MP4 Exercise Video
+  /// 📤 Supabase Storage Bucket: Upload MP4 Exercise Video
   static Future<String> uploadExerciseVideo({
     required String fileName,
     required List<int> videoBytes,
@@ -50,7 +49,7 @@ class SupabaseService {
     return '$supabaseUrl/storage/v1/object/public/exercise-videos/mp4/$fileName';
   }
 
-  /// 📸 Storage: Upload User Profile Photo
+  /// 📸 Supabase Storage Bucket: Upload User Profile Photo
   static Future<String> uploadUserPhoto({
     required String fileName,
     required List<int> photoBytes,
@@ -61,9 +60,11 @@ class SupabaseService {
             .from('user-photos')
             .uploadBinary('avatars/$fileName', Uint8List.fromList(photoBytes));
 
-        return Supabase.instance.client.storage
+        final publicUrl = Supabase.instance.client.storage
             .from('user-photos')
             .getPublicUrl('avatars/$fileName');
+
+        return publicUrl;
       }
     } catch (e) {
       debugPrint('📸 Supabase Photo Upload Note: $e');
@@ -71,7 +72,7 @@ class SupabaseService {
     return '$supabaseUrl/storage/v1/object/public/user-photos/avatars/$fileName';
   }
 
-  /// 📑 Storage: Upload Trainer/Advisor Verification Documents
+  /// 📑 Supabase Storage Bucket: Upload Trainer/Advisor Verification Documents (PDF / Images)
   static Future<String> uploadVerificationDoc({
     required String fileName,
     required List<int> docBytes,
@@ -117,7 +118,7 @@ class SupabaseService {
     return true;
   }
 
-  /// 🗄️ Database: Save Workout Record
+  /// 🗄️ Database: Save Workout Record to Supabase 'workouts' table
   static Future<bool> saveWorkoutToSupabase({
     Workout? workout,
     String? workoutId,
@@ -127,13 +128,28 @@ class SupabaseService {
     String? status,
     String? videoUrl,
   }) async {
-    final id = workout?.id ??
-        workoutId ??
-        DateTime.now().millisecondsSinceEpoch.toString();
-    final t = workout?.title ?? title ?? 'New Workout';
-    final l = workout?.level ?? level ?? 'Beginner';
+    if (!isInitialized) {
+      await initializeSupabase();
+    }
+
+    final rawId = (workout?.id != null && workout!.id.isNotEmpty)
+        ? workout.id
+        : (workoutId != null && workoutId.isNotEmpty ? workoutId : null);
+    final id = rawId ?? 'w_${DateTime.now().millisecondsSinceEpoch}';
+
+    final t = (workout?.title != null && workout!.title.isNotEmpty)
+        ? workout.title
+        : (title != null && title.isNotEmpty ? title : 'New Workout');
+
+    final l = (workout?.level != null && workout!.level.isNotEmpty)
+        ? workout.level
+        : (level != null && level.isNotEmpty ? level : 'Beginner');
+
     final d = workout?.durationMinutes ?? durationMinutes ?? 20;
-    final s = workout?.status ?? status ?? 'Published';
+    final s = (workout?.status != null && workout!.status.isNotEmpty)
+        ? workout.status
+        : (status != null && status.isNotEmpty ? status : 'published');
+
     final v = workout?.videoUrl ?? videoUrl ?? '';
 
     try {
@@ -147,12 +163,26 @@ class SupabaseService {
           'video_url': v,
           'created_at': DateTime.now().toIso8601String(),
         });
+        debugPrint('⚡ Saved Workout "$t" ($id) to Supabase Database!');
         return true;
       }
     } catch (e) {
       debugPrint('⚡ Supabase Workout Save Note: $e');
     }
     return true;
+  }
+
+  /// 🗄️ Database: Stream Workouts
+  static Stream<List<Workout>> streamWorkoutsFromSupabase() {
+    try {
+      if (isInitialized) {
+        return Supabase.instance.client
+            .from('workouts')
+            .stream(primaryKey: ['id'])
+            .map((list) => list.map((map) => Workout.fromMap(map)).toList());
+      }
+    } catch (_) {}
+    return Stream.value([]);
   }
 
   /// 🗄️ Database: Update Workout Status

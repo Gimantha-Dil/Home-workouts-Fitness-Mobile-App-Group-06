@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../core/models/workout_model.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
-import '../../shared/widgets/exercise_lottie_widget.dart';
 import '../../shared/widgets/exercise_video_player.dart';
 
 class ExerciseDetailsScreen extends StatefulWidget {
@@ -16,6 +15,8 @@ class ExerciseDetailsScreen extends StatefulWidget {
 class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
   int _tab = 0;
 
+  static const String _defaultDemoVideo = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+
   final _steps = const [
     ('Starting Setup', 'Start in a kneeling position on the mat with hands slightly wider than shoulder-width, palms firmly planted.'),
     ('Core & Spinal Alignment', 'Keep your back straight, ribcage tucked, and engage your core to form a smooth diagonal line from head to knees.'),
@@ -25,7 +26,11 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hasVideo = widget.exercise.videoUrl != null && widget.exercise.videoUrl!.isNotEmpty;
+    final String videoToPlay = (widget.exercise.videoUrl != null &&
+            widget.exercise.videoUrl!.trim().isNotEmpty &&
+            widget.exercise.videoUrl!.startsWith('http'))
+        ? widget.exercise.videoUrl!
+        : _defaultDemoVideo;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -75,36 +80,11 @@ class _ExerciseDetailsScreenState extends State<ExerciseDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Real MP4 Exercise Video Streaming Player or Placeholder
-                  if (hasVideo)
-                    ExerciseVideoPlayer(
-                      videoUrl: widget.exercise.videoUrl!,
-                      title: widget.exercise.name,
-                    )
-                  else
-                    Container(
-                      height: 180,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF3F4F6),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.videocam_off_outlined, color: AppColors.textSecondary, size: 40),
-                          const SizedBox(height: 8),
-                          Text(widget.exercise.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textPrimary)),
-                          const SizedBox(height: 2),
-                          const Text('No video available yet', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 12),
-
-                  // Lottie 60 FPS Exercise Motion Animation
-                  const ExerciseLottieWidget(height: 100),
+                  // Real 10-Second Demonstration Video Player
+                  ExerciseVideoPlayer(
+                    videoUrl: videoToPlay,
+                    title: widget.exercise.name,
+                  ),
                   const SizedBox(height: 16),
 
                   // Tabs: Instructions | Trainer Tips

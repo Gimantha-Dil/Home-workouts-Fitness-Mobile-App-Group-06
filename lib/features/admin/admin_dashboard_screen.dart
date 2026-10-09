@@ -9,6 +9,8 @@ import 'advisor_management_screen.dart';
 import 'feedback_issues_screen.dart';
 import 'reports_analytics_screen.dart';
 import 'trainer_management_screen.dart';
+import 'user_management_screen.dart';
+import 'workout_content_management_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -96,10 +98,22 @@ class AdminDashboardScreen extends StatelessWidget {
                       crossAxisSpacing: 10,
                       childAspectRatio: 1.3,
                       children: [
-                        StatCard(label: 'Total Users', value: '$totalUsers', trailing: 'Live DB', icon: Icons.people_outline, color: AppColors.info),
-                        StatCard(label: 'Active Trainers', value: '$totalTrainers', trailing: 'Verified', icon: Icons.fitness_center, color: AppColors.success),
-                        StatCard(label: 'Health Advisors', value: '$totalAdvisors', trailing: 'Clinical', icon: Icons.health_and_safety_outlined, color: AppColors.purple),
-                        StatCard(label: 'Live Workouts', value: '$totalWorkouts', trailing: 'Published', icon: Icons.sports_gymnastics_outlined, color: AppColors.warning),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const UserManagementScreen())),
+                          child: StatCard(label: 'Total Users', value: '$totalUsers', trailing: 'Live DB', icon: Icons.people_outline, color: AppColors.info),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TrainerManagementScreen())),
+                          child: StatCard(label: 'Active Trainers', value: '$totalTrainers', trailing: 'Verified', icon: Icons.fitness_center, color: AppColors.success),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdvisorManagementScreen())),
+                          child: StatCard(label: 'Health Advisors', value: '$totalAdvisors', trailing: 'Clinical', icon: Icons.health_and_safety_outlined, color: AppColors.purple),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WorkoutContentManagementScreen())),
+                          child: StatCard(label: 'Live Workouts', value: '$totalWorkouts', trailing: 'Published', icon: Icons.sports_gymnastics_outlined, color: AppColors.warning),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),

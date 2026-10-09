@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/models/workout_model.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -32,7 +32,6 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
-    final uid = user?.id ?? '';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -70,21 +69,19 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
         ],
       ),
       body: SafeArea(
-        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: FirebaseFirestore.instance
-              .collection('workouts')
-              .where('createdBy', isEqualTo: uid)
-              .snapshots(),
+        child: StreamBuilder<List<Workout>>(
+          stream: SupabaseService.streamWorkoutsFromSupabase(),
           builder: (context, snapshot) {
-            final docs = snapshot.data?.docs.map((d) => Workout.fromMap({'id': d.id, ...d.data()})).toList() ?? [];
+            final user = context.watch<AuthProvider>().currentUser;
+            final docs = snapshot.data ?? [];
 
             var filtered = docs;
             if (_tab == 1) {
-              filtered = filtered.where((w) => w.status == 'Published').toList();
+              filtered = filtered.where((w) => w.isPublished).toList();
             } else if (_tab == 2) {
-              filtered = filtered.where((w) => w.status == 'Draft').toList();
+              filtered = filtered.where((w) => w.status.toLowerCase() == 'draft').toList();
             } else if (_tab == 3) {
-              filtered = filtered.where((w) => w.status == 'Under Review').toList();
+              filtered = filtered.where((w) => w.status.toLowerCase() == 'under review').toList();
             }
 
             if (_searchQuery.isNotEmpty) {
@@ -93,9 +90,11 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
             }
 
             final totalRoutines = docs.length;
-            final publishedCount = docs.where((w) => w.status == 'Published').length;
-            final draftCount = docs.where((w) => w.status == 'Draft').length;
-            final reviewCount = docs.where((w) => w.status == 'Under Review').length;
+            final publishedCount = docs.where((w) => w.isPublished).length;
+            final draftCount = docs.where((w) => w.status.toLowerCase() == 'draft').length;
+            final reviewCount = docs.where((w) => w.status.toLowerCase() == 'under review').length;
+
+            final isApproved = user?.verificationStatus == 'approved';
 
             return Column(
               children: [
@@ -103,6 +102,28 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(20),
                     children: [
+                      if (!isApproved)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                          ),
+                          child: Row(
+                            children: const [
+                              Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Account Pending Admin Approval: You can view your dashboard, but adding/publishing workouts is locked until the admin verifies your credentials.',
+                                  style: TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -114,14 +135,22 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CreateWorkoutScreen())),
+                            onPressed: () {
+                              if (!isApproved) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Admin approval is required before you can create workouts.')),
+                                );
+                                return;
+                              }
+                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CreateWorkoutScreen()));
+                            },
                             icon: const Icon(Icons.add, size: 14),
                             label: const Text('Create', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
                       const SizedBox(height: 2),
-                      const Text('Manage curriculum & live routines from Firestore', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                      const Text('Manage curriculum & live routines from Supabase DB', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                       const SizedBox(height: 16),
 
                       // Summary Badges
@@ -176,14 +205,14 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
                         const Center(
                           child: Padding(
                             padding: EdgeInsets.all(30),
-                            child: Text('No workouts found in Firestore.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                            child: Text('No workouts found in Supabase DB.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
                           ),
                         )
                       else
                         ...filtered.map((w) {
                           Color statusColor = AppColors.success;
-                          if (w.status == 'Draft') statusColor = AppColors.warning;
-                          if (w.status == 'Under Review') statusColor = AppColors.info;
+                          if (w.status.toLowerCase() == 'draft') statusColor = AppColors.warning;
+                          if (w.status.toLowerCase() == 'under review') statusColor = AppColors.info;
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
