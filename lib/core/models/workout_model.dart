@@ -28,10 +28,12 @@ class Exercise {
       'sets': sets,
       'reps': reps,
       'restSeconds': restSeconds,
+      'rest_seconds': restSeconds,
       'difficulty': difficulty,
       'instructions': instructions,
       'tip': tip,
       'videoUrl': videoUrl,
+      'video_url': videoUrl,
     };
   }
 
@@ -48,8 +50,8 @@ class Exercise {
               : (int.tryParse(map['restSeconds']?.toString() ?? '') ?? 30)),
       difficulty: map['difficulty']?.toString() ?? 'Beginner',
       instructions: map['instructions'] is List
-          ? List<String>.from(map['instructions'].map((e) => e.toString()))
-          : [],
+          ? List<String>.from(map['instructions'])
+          : (map['instructions'] != null ? [map['instructions'].toString()] : []),
       tip: map['tip']?.toString() ?? '',
       videoUrl: map['videoUrl']?.toString() ?? map['video_url']?.toString(),
     );
