@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../main.dart';
 import '../../shared/widgets/app_network_image.dart';
@@ -27,43 +29,131 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
     );
   }
 
+  Future<void> _pickAndUploadProfilePhoto() async {
+    final user = context.read<AuthProvider>().currentUser;
+    if (user == null) return;
+
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1080,
+        imageQuality: 80,
+      );
+      if (pickedFile != null) {
+        _showSnack('Uploading profile picture to Supabase...');
+        final bytes = await pickedFile.readAsBytes();
+        final format = pickedFile.name.contains('.') ? pickedFile.name.split('.').last : 'jpg';
+
+        final publicUrl = await StorageService.uploadProfilePhoto(
+          bytes: bytes,
+          uid: user.id,
+          format: format,
+        );
+
+        await FirebaseFirestore.instance.collection('users').doc(user.id).update({
+          'profilePhotoUrl': publicUrl,
+        });
+
+        final fbUser = fb.FirebaseAuth.instance.currentUser;
+        if (fbUser != null) {
+          await fbUser.updatePhotoURL(publicUrl);
+          if (mounted) {
+            await context.read<AuthProvider>().refreshUserFromFirestore(fbUser);
+          }
+        }
+
+        if (mounted) {
+          _showSnack('Profile picture updated successfully!');
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnack('Failed to upload profile photo: $e');
+      }
+    }
+  }
+
   void _showEditProfileDialog(BuildContext context) {
     final user = context.read<AuthProvider>().currentUser;
     final controller = TextEditingController(text: user?.name ?? '');
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Profile Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Full Name'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
-            onPressed: () async {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty && user != null) {
-                try {
-                  await FirebaseFirestore.instance.collection('users').doc(user.id).update({
-                    'name': newName,
-                  });
-                  final fbUser = fb.FirebaseAuth.instance.currentUser;
-                  if (fbUser != null) {
-                    await fbUser.updateDisplayName(newName);
-                    if (context.mounted) {
-                      await context.read<AuthProvider>().refreshUserFromFirestore(fbUser);
-                    }
-                  }
-                } catch (_) {}
-              }
-              if (ctx.mounted) Navigator.of(ctx).pop();
-            },
-            child: const Text('Save'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Edit Advisor Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 36,
+                        child: ClipOval(
+                          child: AppNetworkImage(
+                            url: user?.profilePhotoUrl,
+                            width: 72,
+                            height: 72,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: CircleAvatar(
+                          radius: 14,
+                          backgroundColor: AppColors.brandTeal,
+                          child: IconButton(
+                            icon: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                            onPressed: () async {
+                              Navigator.of(ctx).pop();
+                              await _pickAndUploadProfilePhoto();
+                              if (mounted) _showEditProfileDialog(context);
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  decoration: const InputDecoration(labelText: 'Full Name'),
+                ),
+              ],
+            ),
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+              onPressed: () async {
+                final newName = controller.text.trim();
+                if (newName.isNotEmpty && user != null) {
+                  try {
+                    await FirebaseFirestore.instance.collection('users').doc(user.id).update({
+                      'name': newName,
+                    });
+                    final fbUser = fb.FirebaseAuth.instance.currentUser;
+                    if (fbUser != null) {
+                      await fbUser.updateDisplayName(newName);
+                      if (context.mounted) {
+                        await context.read<AuthProvider>().refreshUserFromFirestore(fbUser);
+                      }
+                    }
+                  } catch (_) {}
+                }
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -93,8 +183,6 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
       ),
     );
   }
-
-
 
   void _openLanguageDialog() {
     showDialog(
@@ -266,13 +354,7 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
             }
           },
         ),
-        title: const Row(
-          children: [
-            Text('Advisor Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            SizedBox(width: 6),
-            Text('H10 // SYSTEM CONFIG', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-          ],
-        ),
+        title: const Text('Advisor Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(icon: const Icon(Icons.shield_outlined, size: 20), onPressed: _openPrivacyDialog),
         ],
@@ -286,14 +368,30 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 20,
-                    child: ClipOval(
-                      child: AppNetworkImage(
-                        url: user?.profilePhotoUrl,
-                        width: 40,
-                        height: 40,
-                      ),
+                  GestureDetector(
+                    onTap: () => _pickAndUploadProfilePhoto(),
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          child: ClipOval(
+                            child: AppNetworkImage(
+                              url: user?.profilePhotoUrl,
+                              width: 40,
+                              height: 40,
+                            ),
+                          ),
+                        ),
+                        const Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 8,
+                            backgroundColor: AppColors.brandTeal,
+                            child: Icon(Icons.camera_alt, size: 8, color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
