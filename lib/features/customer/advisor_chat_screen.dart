@@ -48,6 +48,136 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
     super.dispose();
   }
 
+  void _showMessageOptions(String msgId, String text, bool isMe) {
+    if (!isMe) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Edit Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.brandTeal)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showEditDialog(msgId, text);
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              title: const Text('Delete Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.danger)),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showDeleteDialog(msgId);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditDialog(String msgId, String currentText) {
+    final editCtrl = TextEditingController(text: currentText);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        content: TextField(
+          controller: editCtrl,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'Edit your message...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+            onPressed: () async {
+              final newText = editCtrl.text.trim();
+              if (newText.isNotEmpty && newText != currentText) {
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('chats')
+                      .doc(_chatId)
+                      .collection('messages')
+                      .doc(msgId)
+                      .update({
+                    'text': newText,
+                    'edited': true,
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  });
+
+                  await FirebaseFirestore.instance
+                      .collection('chats')
+                      .doc(_chatId)
+                      .set({
+                    'lastMessage': '$newText (edited)',
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  }, SetOptions(merge: true));
+
+                } catch (e) {
+                  debugPrint('Error editing message: $e');
+                }
+              }
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            },
+            child: const Text('Save Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(String msgId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        content: const Text('Delete this message for everyone in this consultation chat?', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () async {
+              try {
+                await FirebaseFirestore.instance
+                    .collection('chats')
+                    .doc(_chatId)
+                    .collection('messages')
+                    .doc(msgId)
+                    .delete();
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Message deleted for everyone.')),
+                  );
+                }
+              } catch (e) {
+                debugPrint('Error deleting message: $e');
+              }
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _sendMessage([String? quickText]) async {
     final text = quickText ?? _msgController.text.trim();
     if (text.isEmpty) return;
@@ -220,9 +350,12 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
                     padding: const EdgeInsets.all(16),
                     itemCount: docs.length,
                     itemBuilder: (ctx, i) {
-                      final data = docs[i].data();
+                      final doc = docs[i];
+                      final msgId = doc.id;
+                      final data = doc.data();
                       final isMe = data['senderId'] == user?.uid;
                       final text = data['text'] ?? '';
+                      final isEdited = data['edited'] == true;
                       final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
                       final timeStr = timestamp != null
                           ? '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}'
@@ -230,38 +363,50 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
 
                       return Align(
                         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                          decoration: BoxDecoration(
-                            color: isMe ? AppColors.brandTeal : Colors.white,
-                            borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(14),
-                              topRight: const Radius.circular(14),
-                              bottomLeft: isMe ? const Radius.circular(14) : const Radius.circular(2),
-                              bottomRight: isMe ? const Radius.circular(2) : const Radius.circular(14),
+                        child: GestureDetector(
+                          onTap: () => _showMessageOptions(msgId, text, isMe),
+                          onLongPress: () => _showMessageOptions(msgId, text, isMe),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                            decoration: BoxDecoration(
+                              color: isMe ? AppColors.brandTeal : Colors.white,
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(14),
+                                topRight: const Radius.circular(14),
+                                bottomLeft: isMe ? const Radius.circular(14) : const Radius.circular(2),
+                                bottomRight: isMe ? const Radius.circular(2) : const Radius.circular(14),
+                              ),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2)),
+                              ],
                             ),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2)),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                text,
-                                style: TextStyle(fontSize: 12, color: isMe ? Colors.white : AppColors.textPrimary, height: 1.3),
-                              ),
-                              const SizedBox(height: 4),
-                              Align(
-                                alignment: Alignment.bottomRight,
-                                child: Text(
-                                  timeStr,
-                                  style: TextStyle(fontSize: 8, color: isMe ? Colors.white70 : AppColors.textSecondary),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  text,
+                                  style: TextStyle(fontSize: 12, color: isMe ? Colors.white : AppColors.textPrimary, height: 1.3),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isEdited) ...[
+                                      Text(
+                                        '(edited) ',
+                                        style: TextStyle(fontSize: 8, fontStyle: FontStyle.italic, color: isMe ? Colors.white70 : AppColors.textSecondary),
+                                      ),
+                                    ],
+                                    Text(
+                                      timeStr,
+                                      style: TextStyle(fontSize: 8, color: isMe ? Colors.white70 : AppColors.textSecondary),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
