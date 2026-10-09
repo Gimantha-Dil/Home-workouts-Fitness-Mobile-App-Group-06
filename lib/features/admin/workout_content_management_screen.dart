@@ -3,7 +3,7 @@ import '../../core/models/workout_model.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
-import 'admin_dashboard_screen.dart';
+import 'admin_shell.dart';
 
 class AdminWorkoutProgram {
   final String id;
