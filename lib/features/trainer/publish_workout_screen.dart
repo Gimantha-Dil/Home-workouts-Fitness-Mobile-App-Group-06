@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../core/models/workout_model.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/repositories/workout_repository.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import 'trainer_shell.dart';
@@ -11,8 +12,29 @@ class PublishWorkoutScreen extends StatefulWidget {
   final String title;
   final String level;
   final String duration;
+  final String videoUrl;
+  final String exerciseName;
+  final int sets;
+  final int reps;
+  final int restSeconds;
+  final String exerciseDifficulty;
+  final List<String> instructions;
+  final String tip;
 
-  const PublishWorkoutScreen({super.key, required this.title, required this.level, required this.duration});
+  const PublishWorkoutScreen({
+    super.key,
+    required this.title,
+    required this.level,
+    required this.duration,
+    this.videoUrl = '',
+    this.exerciseName = 'Main Exercise',
+    this.sets = 3,
+    this.reps = 10,
+    this.restSeconds = 30,
+    this.exerciseDifficulty = 'Beginner',
+    this.instructions = const [],
+    this.tip = '',
+  });
 
   @override
   State<PublishWorkoutScreen> createState() => _PublishWorkoutScreenState();
@@ -32,28 +54,54 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
 
     try {
       final repo = WorkoutRepository();
+      final newWorkoutId = 'w_${DateTime.now().millisecondsSinceEpoch}';
+
       final workout = Workout(
-        id: '',
+        id: newWorkoutId,
         title: widget.title,
         description: 'Custom trainer workout routine published to FitPulse catalog.',
         level: widget.level,
         durationMinutes: int.tryParse(widget.duration.replaceAll(RegExp(r'[^0-9]'), '')) ?? 20,
-        status: 'Published',
-        exercises: const [
-          Exercise(id: 'ex1', name: 'Warm-up Arm Circles', sets: 1, reps: 10, restSeconds: 15),
-          Exercise(id: 'ex2', name: 'Kneeling Push-ups', sets: 3, reps: 10, restSeconds: 30),
+        status: 'published',
+        videoUrl: widget.videoUrl,
+        exercises: [
+          Exercise(
+            id: 'ex_${DateTime.now().millisecondsSinceEpoch}',
+            name: widget.exerciseName.isNotEmpty ? widget.exerciseName : 'Primary Exercise',
+            sets: widget.sets,
+            reps: widget.reps,
+            restSeconds: widget.restSeconds,
+            difficulty: widget.exerciseDifficulty,
+            instructions: widget.instructions.where((i) => i.trim().isNotEmpty).toList(),
+            tip: widget.tip,
+            videoUrl: widget.videoUrl,
+          ),
         ],
       );
 
+      // Save to Firestore via Repository
       await repo.saveWorkout(workout, user.id, user.name);
+
+      // Save/Sync to Supabase PostgreSQL Database 'workouts' table
+      await SupabaseService.saveWorkoutToSupabase(
+        workoutId: newWorkoutId,
+        title: workout.title,
+        level: workout.level,
+        durationMinutes: workout.durationMinutes,
+        status: 'published',
+        videoUrl: widget.videoUrl,
+      );
 
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Workout published successfully! Visible to all users.')),
+          const SnackBar(
+            content: Text('⚡ Workout & Video published successfully to Supabase & Firestore!'),
+            backgroundColor: AppColors.brandTeal,
+          ),
         );
         navigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const TrainerShell()),
-              (route) => false,
+          (route) => false,
         );
       }
     } catch (e) {
@@ -68,12 +116,12 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const checklist = [
-      'Workout details',
-      'All exercises with instructions',
-      'Video uploads',
-      'Difficulty level',
-      'Target goal',
+    final checklist = [
+      'Workout Title: ${widget.title}',
+      'Primary Exercise: ${widget.exerciseName}',
+      'Volume: ${widget.sets} sets x ${widget.reps} reps',
+      'Difficulty Level: ${widget.level}',
+      'Video Upload: ${widget.videoUrl.isNotEmpty ? "Attached" : "Optional"}',
     ];
 
     return Scaffold(
@@ -111,6 +159,7 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
                             children: [
                               Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold)),
                               Text('Level: ${widget.level} • ${widget.duration}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              Text('Exercise: ${widget.exerciseName}', style: const TextStyle(fontSize: 11, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -124,7 +173,7 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(color: AppColors.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-                        child: Text('${checklist.length} of ${checklist.length} Verified',
+                        child: Text('${checklist.length} Verified',
                             style: const TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.w700)),
                       ),
                     ],
@@ -136,8 +185,7 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
                       children: [
                         const Icon(Icons.check_circle, color: AppColors.success, size: 20),
                         const SizedBox(width: 10),
-                        Expanded(child: Text(c)),
-                        const Text('100%', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        Expanded(child: Text(c, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
                       ],
                     ),
                   )),
@@ -150,7 +198,7 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                              'Public Catalog Distribution: once approved and published, this routine will be instantly accessible to all active FitPulse subscribers.',
+                              'Public Catalog Distribution: once published, this routine and video will be instantly accessible to all active FitPulse subscribers.',
                               style: TextStyle(fontSize: 11, color: AppColors.textPrimary)),
                         ),
                       ],

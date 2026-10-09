@@ -3,6 +3,7 @@ import '../../core/models/workout_model.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'admin_shell.dart';
 
 class AdminWorkoutProgram {
   final String id;
@@ -211,6 +212,10 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AdminShell()),
+              );
             }
           },
         ),

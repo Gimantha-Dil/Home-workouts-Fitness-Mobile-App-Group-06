@@ -37,15 +37,21 @@ class Exercise {
 
   factory Exercise.fromMap(Map<String, dynamic> map) {
     return Exercise(
-      id: map['id'] ?? '',
-      name: map['name'] ?? '',
-      sets: map['sets'] ?? 3,
-      reps: map['reps'] ?? 10,
-      restSeconds: map['restSeconds'] ?? 30,
-      difficulty: map['difficulty'] ?? 'Beginner',
-      instructions: List<String>.from(map['instructions'] ?? []),
-      tip: map['tip'] ?? '',
-      videoUrl: map['videoUrl'],
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      sets: (map['sets'] is int) ? map['sets'] : (int.tryParse(map['sets']?.toString() ?? '') ?? 3),
+      reps: (map['reps'] is int) ? map['reps'] : (int.tryParse(map['reps']?.toString() ?? '') ?? 10),
+      restSeconds: (map['restSeconds'] is int)
+          ? map['restSeconds']
+          : (map['rest_seconds'] is int
+              ? map['rest_seconds']
+              : (int.tryParse(map['restSeconds']?.toString() ?? '') ?? 30)),
+      difficulty: map['difficulty']?.toString() ?? 'Beginner',
+      instructions: map['instructions'] is List
+          ? List<String>.from(map['instructions'].map((e) => e.toString()))
+          : [],
+      tip: map['tip']?.toString() ?? '',
+      videoUrl: map['videoUrl']?.toString() ?? map['video_url']?.toString(),
     );
   }
 }
@@ -63,6 +69,7 @@ class Workout {
   final List<Exercise> exercises;
 
   bool get hasExercises => exercises.isNotEmpty;
+  bool get isPublished => status.toLowerCase() == 'published';
 
   Exercise? exerciseAt(int i) => (i >= 0 && i < exercises.length) ? exercises[i] : null;
 
@@ -85,10 +92,13 @@ class Workout {
       'title': title,
       'description': description,
       'level': level,
+      'duration_minutes': durationMinutes,
       'durationMinutes': durationMinutes,
       'goal': goal,
       'status': status,
+      'image_url': imageUrl,
       'imageUrl': imageUrl,
+      'video_url': videoUrl,
       'videoUrl': videoUrl,
       'exercises': exercises.map((e) => e.toMap()).toList(),
     };
@@ -105,16 +115,24 @@ class Workout {
         }
       }
     }
+
+    int parseDuration(dynamic val) {
+      if (val is int) return val;
+      if (val is double) return val.toInt();
+      if (val is String) return int.tryParse(val) ?? 20;
+      return 20;
+    }
+
     return Workout(
-      id: map['id'] ?? '',
-      title: map['title'] ?? '',
-      description: map['description'] ?? '',
-      level: map['level'] ?? 'Beginner',
-      durationMinutes: map['durationMinutes'] ?? 15,
-      goal: map['goal'] ?? 'General Fitness',
-      status: map['status'] ?? 'Draft',
-      imageUrl: map['imageUrl'] ?? 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
-      videoUrl: map['videoUrl'],
+      id: map['id']?.toString() ?? '',
+      title: map['title']?.toString() ?? 'Untitled Workout',
+      description: map['description']?.toString() ?? '',
+      level: map['level']?.toString() ?? 'Beginner',
+      durationMinutes: parseDuration(map['duration_minutes'] ?? map['durationMinutes']),
+      goal: map['goal']?.toString() ?? 'General Fitness',
+      status: map['status']?.toString() ?? 'Draft',
+      imageUrl: map['image_url']?.toString() ?? map['imageUrl']?.toString() ?? 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=400&auto=format&fit=crop',
+      videoUrl: map['video_url']?.toString() ?? map['videoUrl']?.toString(),
       exercises: list,
     );
   }
