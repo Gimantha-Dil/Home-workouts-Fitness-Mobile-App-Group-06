@@ -130,7 +130,7 @@ flutter analyze
 ## 👥 Group 06 Team Members
 Developed with  by  **Group 06** for the Human-Computer Interaction (HCI) Module.
 
-IT23543096      PRIYASHAN H.L.D                         Fitness Trainer Portal
+IT23543096       PRIYASHAN H.L.D                         Fitness Trainer Portal
 
 IT23543478	     GUNASEKARA A.G.A.G.D               Customer(User)
 
