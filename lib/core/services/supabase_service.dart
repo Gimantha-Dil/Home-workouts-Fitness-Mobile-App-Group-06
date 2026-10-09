@@ -196,16 +196,93 @@ class SupabaseService {
     required String status,
   }) async {
     try {
-      if (isInitialized) {
-        await Supabase.instance.client.from('workouts').update({
-          'status': status,
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', workoutId);
-        return true;
+      if (!isInitialized) {
+        await initializeSupabase();
       }
+
+      await Supabase.instance.client.from('workouts').update({
+        'status': status.toLowerCase(),
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', workoutId);
+
+      debugPrint('⚡ Updated status for workout $workoutId to $status in Supabase Database');
+      return true;
     } catch (e) {
       debugPrint('⚡ Supabase Update Workout Status Note: $e');
     }
     return true;
+  }
+
+  /// 🗑️ Supabase Storage & Database: Delete Exercise Video
+  static Future<bool> deleteExerciseVideoFromSupabase({
+    required String videoUrl,
+    required String workoutId,
+  }) async {
+    try {
+      if (!isInitialized) {
+        await initializeSupabase();
+      }
+
+      // Try removing file from Supabase Storage bucket 'exercise-videos'
+      try {
+        final uri = Uri.parse(videoUrl);
+        final pathSegments = uri.pathSegments;
+        if (pathSegments.isNotEmpty) {
+          final bucketIndex = pathSegments.indexOf('exercise-videos');
+          if (bucketIndex != -1 && bucketIndex < pathSegments.length - 1) {
+            final filePath = pathSegments.sublist(bucketIndex + 1).join('/');
+            await Supabase.instance.client.storage
+                .from('exercise-videos')
+                .remove([filePath]);
+            debugPrint('🗑 Deleted video file "$filePath" from Supabase Storage bucket exercise-videos');
+          }
+        }
+      } catch (e) {
+        debugPrint('🗑 Storage file remove note: $e');
+      }
+
+      // Clear video_url column in Supabase Database table 'workouts'
+      if (workoutId.isNotEmpty) {
+        await Supabase.instance.client.from('workouts').update({
+          'video_url': '',
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', workoutId);
+        debugPrint('⚡ Cleared video_url for workout $workoutId in Supabase Database');
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('⚡ Supabase Delete Video Error: $e');
+    }
+    return false;
+  }
+
+  /// 🗑️ Database: Delete Workout Record from Supabase
+  static Future<bool> deleteWorkoutFromSupabase({
+    required String workoutId,
+    String? videoUrl,
+  }) async {
+    try {
+      if (!isInitialized) {
+        await initializeSupabase();
+      }
+
+      // Delete associated video from Storage if exists
+      if (videoUrl != null && videoUrl.isNotEmpty) {
+        await deleteExerciseVideoFromSupabase(videoUrl: videoUrl, workoutId: '');
+      }
+
+      // Delete workout row from Supabase Database table 'workouts'
+      await Supabase.instance.client
+          .from('workouts')
+          .delete()
+          .eq('id', workoutId);
+
+      debugPrint('🗑 Deleted workout $workoutId from Supabase Database table workouts');
+      return true;
+    } catch (e) {
+      debugPrint('⚡ Supabase Delete Workout Error: $e');
+    }
+    return false;
   }
 }
