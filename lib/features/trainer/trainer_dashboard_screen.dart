@@ -52,7 +52,9 @@ class TrainerDashboardScreen extends StatelessWidget {
         child: StreamBuilder<List<Workout>>(
           stream: SupabaseService.streamWorkoutsFromSupabase(),
           builder: (context, snapshot) {
-            final docs = snapshot.data ?? [];
+            final docs = List<Workout>.from(snapshot.data ?? []);
+            // Sort by ID / Timestamp descending so newest created/updated workouts appear first in Recent Activity
+            docs.sort((a, b) => b.id.compareTo(a.id));
 
             final totalBuilt = docs.length;
             final liveCatalog = docs.where((w) => w.isPublished).length;

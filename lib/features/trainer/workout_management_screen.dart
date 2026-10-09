@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../core/models/workout_model.dart';
-import '../../core/providers/auth_provider.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
@@ -72,8 +70,9 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
         child: StreamBuilder<List<Workout>>(
           stream: SupabaseService.streamWorkoutsFromSupabase(),
           builder: (context, snapshot) {
-            final user = context.watch<AuthProvider>().currentUser;
-            final docs = snapshot.data ?? [];
+            final docs = List<Workout>.from(snapshot.data ?? []);
+            // Sort by ID / Timestamp descending so newest created/updated workouts appear first
+            docs.sort((a, b) => b.id.compareTo(a.id));
 
             var filtered = docs;
             if (_tab == 1) {
