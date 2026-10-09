@@ -1,7 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:provider/provider.dart';
 import 'core/models/user_role.dart';
 import 'core/providers/auth_provider.dart';
@@ -27,14 +26,9 @@ import 'firebase_options.dart';
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
-  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  
-  if (!kIsWeb) {
-    try {
-      FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-    } catch (_) {}
-  }
+  WidgetsFlutterBinding.ensureInitialized();
 
+  // Await Firebase initialization so FirebaseAuth.instance is 100% ready before Providers load
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -168,7 +162,7 @@ class _UnauthFlowState extends State<UnauthFlow> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 1800), () {
+    Future.delayed(const Duration(milliseconds: 600), () {
       if (mounted) {
         setState(() => _showSplash = false);
       }

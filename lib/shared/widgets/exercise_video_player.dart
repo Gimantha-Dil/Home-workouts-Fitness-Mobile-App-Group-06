@@ -21,13 +21,23 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
   bool _initialized = false;
   bool _hasError = false;
 
+  static const String fallbackVideoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+
   @override
   void initState() {
     super.initState();
-    _initializeVideo();
+    _initializeVideo(widget.videoUrl.isNotEmpty ? widget.videoUrl : fallbackVideoUrl);
   }
 
-  Future<void> _initializeVideo() async {
+  @override
+  void didUpdateWidget(covariant ExerciseVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.videoUrl != widget.videoUrl) {
+      _initializeVideo(widget.videoUrl.isNotEmpty ? widget.videoUrl : fallbackVideoUrl);
+    }
+  }
+
+  Future<void> _initializeVideo(String url) async {
     setState(() {
       _hasError = false;
       _initialized = false;
@@ -39,11 +49,14 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
       }
 
       _controller = VideoPlayerController.networkUrl(
-        Uri.parse(widget.videoUrl),
+        Uri.parse(url),
       );
 
       await _controller!.initialize();
       _controller!.setLooping(true);
+      _controller!.setVolume(1.0);
+      await _controller!.play();
+
       if (mounted) {
         setState(() {
           _initialized = true;
@@ -51,11 +64,16 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _hasError = true;
-          _initialized = false;
-        });
+      debugPrint('Video init failed for $url: $e');
+      if (url != fallbackVideoUrl) {
+        _initializeVideo(fallbackVideoUrl);
+      } else {
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _initialized = false;
+          });
+        }
       }
     }
   }
@@ -136,18 +154,18 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, color: AppColors.danger, size: 40),
+                        const Icon(Icons.fitness_center, color: AppColors.brandTeal, size: 40),
                         const SizedBox(height: 8),
-                        const Text('Unable to load video stream', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text(widget.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                         const SizedBox(height: 10),
                         OutlinedButton.icon(
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
                             side: const BorderSide(color: AppColors.brandTeal),
                           ),
-                          onPressed: _initializeVideo,
-                          icon: const Icon(Icons.refresh, size: 16),
-                          label: const Text('Retry'),
+                          onPressed: () => _initializeVideo(fallbackVideoUrl),
+                          icon: const Icon(Icons.play_circle, size: 16),
+                          label: const Text('Play Demo Video'),
                         ),
                       ],
                     ),

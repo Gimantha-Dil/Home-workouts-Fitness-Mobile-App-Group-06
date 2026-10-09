@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/models/mock_data.dart';
+import '../../core/models/workout_model.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/history_provider.dart';
 import '../../core/providers/workout_provider.dart';
@@ -41,11 +41,14 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     final publishedWorkouts = context.watch<WorkoutProvider>().publishedWorkouts;
     final historyProvider = context.watch<HistoryProvider>();
 
-    final today = publishedWorkouts.isNotEmpty ? publishedWorkouts.first : MockData.workouts.first;
+    final hasPublished = publishedWorkouts.isNotEmpty;
+    final Workout? today = hasPublished ? publishedWorkouts.first : null;
 
     final totalSessions = historyProvider.totalSessions;
     final totalMinutes = (historyProvider.totalActiveHours * 60).round();
     final streakDays = historyProvider.streakDays;
+    final xp = historyProvider.totalXP;
+    final level = historyProvider.currentLevel;
 
     final quickAccess = [
       ('Progress', 'Analytics', Icons.trending_up, AppColors.brandTeal, const ProgressDashboardScreen()),
@@ -66,17 +69,34 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(12)),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircleAvatar(radius: 3, backgroundColor: AppColors.brandTeal),
-                          SizedBox(width: 4),
-                          Text('FITPULSE PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                        ],
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(12)),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircleAvatar(radius: 3, backgroundColor: AppColors.brandTeal),
+                              SizedBox(width: 4),
+                              Text('FITPULSE PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(12)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.bolt, size: 10, color: AppColors.warning),
+                              const SizedBox(width: 2),
+                              Text('$xp XP • LVL $level', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Text('Hello ${user?.name.split(' ').first ?? 'User'} 👋', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
@@ -91,64 +111,87 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            // Today's Workout Hero Card
-            Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F3D3A), Color(0xFF0D9488)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+
+            // Today's Workout Hero Card (Real Published Trainer Workout)
+            if (hasPublished && today != null) ...[
+              Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F3D3A), Color(0xFF0D9488)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: InkWell(
-                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => WorkoutDetailsScreen(workout: today))),
-                borderRadius: BorderRadius.circular(20),
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(20)),
-                              child: const Text("TODAY'S WORKOUT", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(today.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-                            const SizedBox(height: 4),
-                            Text('${today.durationMinutes} min • ${today.exercises.length} exercises\nDay 4 of 30 • Level 1',
-                                style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11, height: 1.3)),
-                            const SizedBox(height: 14),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                foregroundColor: AppColors.brandTealDark,
-                                minimumSize: const Size(120, 38),
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: InkWell(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => WorkoutDetailsScreen(workout: today))),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.all(18),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.18), borderRadius: BorderRadius.circular(20)),
+                                child: const Text("TODAY'S WORKOUT", style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                               ),
-                              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => WorkoutDetailsScreen(workout: today))),
-                              child: const Text('Start Workout', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                            ),
-                          ],
+                              const SizedBox(height: 8),
+                              Text(today.title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                              const SizedBox(height: 4),
+                              Text('${today.durationMinutes} min • ${today.exercises.length} exercises\n${today.level} Level Routine',
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 11, height: 1.3)),
+                              const SizedBox(height: 14),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: AppColors.brandTealDark,
+                                  minimumSize: const Size(120, 38),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => WorkoutDetailsScreen(workout: today))),
+                                child: const Text('Start Workout', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      AppNetworkImage(
-                        url: today.imageUrl,
-                        width: 100,
-                        height: 110,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ],
+                        const SizedBox(width: 12),
+                        AppNetworkImage(
+                          url: today.imageUrl,
+                          width: 100,
+                          height: 110,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+            ] else ...[
+              // No Trainer Workouts Published Yet Banner Card
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF0F3D3A), Color(0xFF0D9488)]),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("TODAY'S WORKOUT", style: TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                    SizedBox(height: 6),
+                    Text('No Trainer Workouts Published Yet', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                    SizedBox(height: 4),
+                    Text('Certified fitness trainers will publish routines soon!', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

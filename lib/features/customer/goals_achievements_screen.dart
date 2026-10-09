@@ -2,10 +2,80 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'customer_shell.dart';
+import 'goal_selection_screen.dart';
 import 'profile_screen.dart';
 
 class GoalsAchievementsScreen extends StatelessWidget {
   const GoalsAchievementsScreen({super.key});
+
+  void _showAchievementDetails(BuildContext context, String title, String desc, IconData icon, Color color) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: color.withValues(alpha: 0.12),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(desc, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: const Color(0xFFF0FDF4), borderRadius: BorderRadius.circular(10)),
+              child: const Row(
+                children: [
+                  Icon(Icons.verified, color: AppColors.brandTeal, size: 18),
+                  SizedBox(width: 8),
+                  Text('Achievement Recorded in Firestore', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Awesome!', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMilestoneDetails(BuildContext context, String title, String sub) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Milestone: $title', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(sub, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+            const SizedBox(height: 10),
+            const Text('Keep completing your daily workouts to unlock this milestone automatically!', style: TextStyle(fontSize: 11, height: 1.3)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,10 +89,14 @@ class GoalsAchievementsScreen extends StatelessWidget {
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const CustomerShell()),
+              );
             }
           },
         ),
-        title: const Text('Active Workout Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Goals & Achievements', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
@@ -61,17 +135,31 @@ class GoalsAchievementsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
+
             // Active Focus
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Active Focus', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                Text('Edit Target ⚙', style: TextStyle(fontSize: 11, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                const Text('Active Focus', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                InkWell(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const GoalSelectionScreen()),
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Text('Edit Target ⚙', style: TextStyle(fontSize: 11, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
+
             AppCard(
               padding: const EdgeInsets.all(16),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const GoalSelectionScreen()),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -128,15 +216,32 @@ class GoalsAchievementsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
+
             // Achievements Section
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Achievements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                Text('3 Unlocked • View All', style: TextStyle(fontSize: 11, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                const Text('Achievements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                InkWell(
+                  onTap: () {
+                    _showAchievementDetails(
+                      context,
+                      'All Unlocked Badges (3/4)',
+                      'You have unlocked 3 milestone badges so far! Keep training to unlock "Month Master".',
+                      Icons.emoji_events,
+                      AppColors.brandTeal,
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Text('3 Unlocked • View All', style: TextStyle(fontSize: 11, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
+
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -144,19 +249,70 @@ class GoalsAchievementsScreen extends StatelessWidget {
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
               childAspectRatio: 1.5,
-              children: const [
-                _BadgeCard(title: 'First Workout', tag: 'Claimed', icon: Icons.emoji_events, color: AppColors.info),
-                _BadgeCard(title: '7 Day Streak', tag: 'Active Now', icon: Icons.local_fire_department, color: AppColors.warning),
-                _BadgeCard(title: '10 Workouts', tag: 'Celebrated', icon: Icons.stars, color: AppColors.brandTeal),
-                _BadgeCard(title: 'Month Master', tag: '80% done', icon: Icons.lock_outline, color: AppColors.textSecondary),
+              children: [
+                _BadgeCard(
+                  title: 'First Workout',
+                  tag: 'Claimed',
+                  icon: Icons.emoji_events,
+                  color: AppColors.info,
+                  onTap: () => _showAchievementDetails(
+                    context,
+                    'First Workout Claimed!',
+                    'You completed your first active workout session on FitPulse.',
+                    Icons.emoji_events,
+                    AppColors.info,
+                  ),
+                ),
+                _BadgeCard(
+                  title: '7 Day Streak',
+                  tag: 'Active Now',
+                  icon: Icons.local_fire_department,
+                  color: AppColors.warning,
+                  onTap: () => _showAchievementDetails(
+                    context,
+                    '7 Day Consistency Streak!',
+                    'You stayed active for 7 consecutive days. Outstanding dedication!',
+                    Icons.local_fire_department,
+                    AppColors.warning,
+                  ),
+                ),
+                _BadgeCard(
+                  title: '10 Workouts',
+                  tag: 'Celebrated',
+                  icon: Icons.stars,
+                  color: AppColors.brandTeal,
+                  onTap: () => _showAchievementDetails(
+                    context,
+                    '10 Workouts Milestone!',
+                    'You successfully logged 10 complete workout routines.',
+                    Icons.stars,
+                    AppColors.brandTeal,
+                  ),
+                ),
+                _BadgeCard(
+                  title: 'Month Master',
+                  tag: '80% done',
+                  icon: Icons.lock_outline,
+                  color: AppColors.textSecondary,
+                  onTap: () => _showAchievementDetails(
+                    context,
+                    'Month Master (In Progress)',
+                    'Complete 20 workout sessions in a single month to unlock this badge. You are 80% there!',
+                    Icons.lock_outline,
+                    AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),
+
             const Text('Upcoming Milestones', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             const SizedBox(height: 10),
-            const AppCard(
-              padding: EdgeInsets.all(12),
-              child: Row(
+
+            AppCard(
+              padding: const EdgeInsets.all(12),
+              onTap: () => _showMilestoneDetails(context, 'Build Strength', '4 weeks left until kickoff'),
+              child: const Row(
                 children: [
                   CircleAvatar(radius: 14, backgroundColor: Color(0xFFE0F2FE), child: Icon(Icons.fitness_center, color: AppColors.info, size: 16)),
                   SizedBox(width: 10),
@@ -174,9 +330,11 @@ class GoalsAchievementsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            const AppCard(
-              padding: EdgeInsets.all(12),
-              child: Row(
+
+            AppCard(
+              padding: const EdgeInsets.all(12),
+              onTap: () => _showMilestoneDetails(context, 'Run 5K', 'Starting next month (Nov 1)'),
+              child: const Row(
                 children: [
                   CircleAvatar(radius: 14, backgroundColor: Color(0xFFF3F4F6), child: Icon(Icons.directions_run, color: AppColors.textSecondary, size: 16)),
                   SizedBox(width: 10),
@@ -194,6 +352,7 @@ class GoalsAchievementsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
             // Coach Quote Card
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -238,15 +397,23 @@ class _BadgeCard extends StatelessWidget {
   final String tag;
   final IconData icon;
   final Color color;
+  final VoidCallback onTap;
 
-  const _BadgeCard({required this.title, required this.tag, required this.icon, required this.color});
+  const _BadgeCard({
+    required this.title,
+    required this.tag,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       padding: const EdgeInsets.all(12),
+      onTap: onTap,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: Checkbox.width > 0 ? MainAxisAlignment.center : MainAxisAlignment.center,
         children: [
           CircleAvatar(
             radius: 18,
