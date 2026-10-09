@@ -32,15 +32,21 @@ class WorkoutContentManagementScreen extends StatefulWidget {
 }
 
 class _WorkoutContentManagementScreenState extends State<WorkoutContentManagementScreen> {
-  int _tab = 0; // 0: All Workouts, 1: Beginner, 2: Intermediate, 3: Advanced
+  int _tab = 0;
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
 
   final List<AdminWorkoutProgram> _workouts = [
-    AdminWorkoutProgram(id: '#W001', title: 'Full Body Beginner', trainer: 'Alex Carter', status: 'Published', level: 'BEGINNER', detail: '30 min • 12 exs', statusColor: AppColors.success),
-    AdminWorkoutProgram(id: '#W002', title: 'Lower Body Strength', trainer: 'Priya Nimal', status: 'Published', level: 'INTERMEDIATE', detail: '25 min • 10 exs', statusColor: AppColors.success),
-    AdminWorkoutProgram(id: '#W003', title: 'Yoga Flow & Mobility', trainer: 'Dulani Fernando', status: 'Published', level: 'BEGINNER', detail: '20 min • 8 exs', statusColor: AppColors.success),
-    AdminWorkoutProgram(id: '#W004', title: 'HIIT Cardio Interval', trainer: 'Sajith Perera', status: 'Needs Moderation', level: 'ADVANCED', detail: '45 min • 15 exs • Submitted 2h ago', statusColor: AppColors.warning),
-    AdminWorkoutProgram(id: '#W005', title: 'Core & Ab Blast', trainer: 'Nuwan Silva', status: 'Published', level: 'INTERMEDIATE', detail: '15 min • 6 exs', statusColor: AppColors.success),
+    AdminWorkoutProgram(id: '#W001', title: 'Beginner Full Body', trainer: 'Coach Alex', status: 'Published', level: 'Beginner', detail: '20 min • 2 Drills', statusColor: AppColors.success),
+    AdminWorkoutProgram(id: '#W002', title: 'Cardio Core Blast', trainer: 'Coach Sarah', status: 'Pending Review', level: 'Intermediate', detail: '25 min • 3 Drills', statusColor: AppColors.warning),
+    AdminWorkoutProgram(id: '#W003', title: 'Lower Body Strength', trainer: 'Coach Mike', status: 'Published', level: 'Advanced', detail: '30 min • 4 Drills', statusColor: AppColors.success),
   ];
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -50,31 +56,25 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
 
   void _openAddWorkoutDialog() {
     final titleCtrl = TextEditingController();
-    final trainerCtrl = TextEditingController(text: 'Gimantha (Super Admin)');
-    String level = 'BEGINNER';
+    final trainerCtrl = TextEditingController();
+    String level = 'Beginner';
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Add New Workout Program', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          title: const Text('Add Catalog Routine', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: titleCtrl,
-                decoration: const InputDecoration(labelText: 'Program Title', prefixIcon: Icon(Icons.fitness_center)),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: trainerCtrl,
-                decoration: const InputDecoration(labelText: 'Trainer / Author', prefixIcon: Icon(Icons.person_outline)),
-              ),
+              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Program Title')),
+              const SizedBox(height: 8),
+              TextField(controller: trainerCtrl, decoration: const InputDecoration(labelText: 'Assigned Trainer')),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: level,
-                decoration: const InputDecoration(labelText: 'Difficulty Level', contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-                items: const ['BEGINNER', 'INTERMEDIATE', 'ADVANCED']
+                decoration: const InputDecoration(labelText: 'Level', contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                items: const ['Beginner', 'Intermediate', 'Advanced']
                     .map((l) => DropdownMenuItem(value: l, child: Text(l)))
                     .toList(),
                 onChanged: (v) => setDialogState(() => level = v!),
@@ -107,21 +107,19 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
                       AdminWorkoutProgram(
                         id: '#W0${_workouts.length + 1}',
                         title: title,
-                        trainer: trainer,
+                        trainer: trainer.isNotEmpty ? trainer : 'Head Coach',
                         status: 'Published',
                         level: level,
-                        detail: '25 min • 10 exs',
+                        detail: '25 min • 3 Drills',
                         statusColor: AppColors.success,
                       ),
                     );
                   });
-                  if (context.mounted) {
-                    Navigator.of(ctx).pop();
-                    _showSnack('Workout program "$title" published & saved to Supabase!');
-                  }
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                  _showSnack('Routine "$title" added to public catalog!');
                 }
               },
-              child: const Text('Publish Program', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('Add Routine', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -129,76 +127,77 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
     );
   }
 
-  void _openEditDialog(AdminWorkoutProgram w) {
+  void _openEditWorkoutDialog(AdminWorkoutProgram w) {
     final titleCtrl = TextEditingController(text: w.title);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Edit ${w.title}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: TextField(
-          controller: titleCtrl,
-          decoration: const InputDecoration(labelText: 'Program Title'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
-            onPressed: () {
-              final newTitle = titleCtrl.text.trim();
-              if (newTitle.isNotEmpty) {
-                setState(() => w.title = newTitle);
-                Navigator.of(ctx).pop();
-                _showSnack('Updated title to "$newTitle"');
-              }
-            },
-            child: const Text('Save Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
+    final trainerCtrl = TextEditingController(text: w.trainer);
+    String status = w.status;
 
-  void _viewWorkoutDetails(AdminWorkoutProgram w) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(w.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('• Program ID: ${w.id}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('• Author/Trainer: ${w.trainer}', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-            const SizedBox(height: 4),
-            Text('• Level: ${w.level}', style: const TextStyle(fontSize: 12, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('• Status: ${w.status}', style: TextStyle(fontSize: 12, color: w.statusColor, fontWeight: FontWeight.bold)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Edit "${w.title}"', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Title')),
+              const SizedBox(height: 8),
+              TextField(controller: trainerCtrl, decoration: const InputDecoration(labelText: 'Trainer')),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: status,
+                decoration: const InputDecoration(labelText: 'Status', contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+                items: const ['Published', 'Pending Review', 'Archived']
+                    .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                    .toList(),
+                onChanged: (v) => setDialogState(() => status = v!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() => _workouts.removeWhere((item) => item.id == w.id));
+                Navigator.of(ctx).pop();
+                _showSnack('Routine removed from catalog.');
+              },
+              child: const Text('Delete', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+              onPressed: () {
+                setState(() {
+                  w.title = titleCtrl.text.trim();
+                  w.trainer = trainerCtrl.text.trim();
+                  w.status = status;
+                  w.statusColor = status == 'Published'
+                      ? AppColors.success
+                      : status == 'Pending Review'
+                          ? AppColors.warning
+                          : AppColors.textSecondary;
+                });
+                Navigator.of(ctx).pop();
+                _showSnack('Routine "${w.title}" updated.');
+              },
+              child: const Text('Save Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    List<AdminWorkoutProgram> filtered = _workouts;
-
+    var list = _workouts;
     if (_tab == 1) {
-      filtered = filtered.where((w) => w.level == 'BEGINNER').toList();
+      list = list.where((w) => w.status == 'Published').toList();
     } else if (_tab == 2) {
-      filtered = filtered.where((w) => w.level == 'INTERMEDIATE').toList();
-    } else if (_tab == 3) {
-      filtered = filtered.where((w) => w.level == 'ADVANCED').toList();
+      list = list.where((w) => w.status == 'Pending Review').toList();
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      list = list.where((w) => w.title.toLowerCase().contains(_searchQuery.toLowerCase()) || w.trainer.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
 
     return Scaffold(
@@ -219,150 +218,134 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
             Icon(Icons.monitor_heart_outlined, color: AppColors.brandTeal, size: 22),
             SizedBox(width: 6),
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
+            SizedBox(width: 6),
+            _Badge(text: 'ADMIN', color: AppColors.brandTeal),
           ],
         ),
-        actions: const [
-          NotificationIconButton(),
-        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(20),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Workout Content', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                      _Badge(text: 'Admin Panel', color: AppColors.brandTeal),
+                      const Text('Workout Program Catalog', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal, minimumSize: const Size(100, 36)),
+                        onPressed: _openAddWorkoutDialog,
+                        icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                        label: const Text('Add Routine', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  const Text('Review, moderate, and deploy workout programs across all trainer tiers with certified clinical accuracy.', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                  const SizedBox(height: 16),
-
-                  // Summary Badges
-                  Row(
-                    children: [
-                      Expanded(child: _SummaryBox(title: 'TOTAL', value: '${_workouts.length}', tag: '+3 this wk', color: AppColors.brandTeal)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _SummaryBox(title: 'LIVE', value: '${_workouts.where((w) => w.status == 'Published').length}', tag: '93.3% rate', color: AppColors.success)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _SummaryBox(title: 'FLAGGED', value: '${_workouts.where((w) => w.status == 'Needs Moderation').length}', tag: '!Action req', color: AppColors.warning)),
-                    ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _searchCtrl,
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                    decoration: const InputDecoration(
+                      hintText: 'Search programs or trainers...',
+                      prefixIcon: Icon(Icons.search, size: 20),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-
-                  PrimaryButton(
-                    label: '+ Add New Workout Program',
-                    onPressed: _openAddWorkoutDialog,
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Tabs
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(child: _tabBtn('All (${_workouts.length})', 0)),
-                      const SizedBox(width: 4),
-                      Expanded(child: _tabBtn('Beginner', 1)),
-                      const SizedBox(width: 4),
-                      Expanded(child: _tabBtn('Intermediate', 2)),
-                      const SizedBox(width: 4),
-                      Expanded(child: _tabBtn('Advanced', 3)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _tabBtn('Published', 1)),
+                      const SizedBox(width: 8),
+                      Expanded(child: _tabBtn('Pending', 2)),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: list.length,
+                itemBuilder: (ctx, i) {
+                  final w = list[i];
+                  final isPending = w.status == 'Pending Review';
 
-                  ...filtered.map((w) {
-                    final isPending = w.status == 'Needs Moderation';
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AppCard(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const CircleAvatar(
-                                  radius: 16,
-                                  backgroundColor: Color(0xFFE0F2FE),
-                                  child: Icon(Icons.fitness_center, color: AppColors.info, size: 16),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(w.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                          _Badge(text: '• ${w.status}', color: w.statusColor),
-                                        ],
-                                      ),
-                                      Text('Trainer: ${w.trainer} • ${w.id}', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: AppCard(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: w.statusColor.withValues(alpha: 0.12),
+                                child: Icon(Icons.fitness_center, color: w.statusColor, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _Badge(text: w.level, color: AppColors.brandTeal),
-                                    const SizedBox(width: 6),
+                                    Row(
+                                      children: [
+                                        Text(w.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(color: w.statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                                          child: Text(w.status.toUpperCase(), style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: w.statusColor)),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text('Trainer: ${w.trainer} • Level: ${w.level}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                                     Text(w.detail, style: const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
                                   ],
                                 ),
-                                if (isPending)
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.brandTeal,
-                                      minimumSize: const Size(120, 28),
-                                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    ),
-                                    onPressed: () async {
-                                      await SupabaseService.updateWorkoutStatusInSupabase(
-                                        workoutId: w.id,
-                                        status: 'Published',
-                                      );
-                                      setState(() {
-                                        w.status = 'Published';
-                                        w.statusColor = AppColors.success;
-                                      });
-                                      _showSnack('${w.title} approved and synced to Supabase!');
-                                    },
-                                    child: const Text('Review & Approve', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                                  )
-                                else
-                                  Row(
-                                    children: [
-                                      IconButton(icon: const Icon(Icons.visibility_outlined, size: 16), onPressed: () => _viewWorkoutDetails(w)),
-                                      IconButton(icon: const Icon(Icons.edit_outlined, size: 16), onPressed: () => _openEditDialog(w)),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.danger),
-                                        onPressed: () {
-                                          setState(() => _workouts.removeWhere((item) => item.id == w.id));
-                                          _showSnack('${w.title} deleted.');
-                                        },
-                                      ),
-                                    ],
+                              ),
+                              if (isPending)
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.brandTeal,
+                                    minimumSize: const Size(120, 28),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                   ),
-                              ],
-                            ),
-                          ],
-                        ),
+                                  onPressed: () async {
+                                    await SupabaseService.updateWorkoutStatusInSupabase(
+                                      workoutId: w.id,
+                                      status: 'Published',
+                                    );
+                                    setState(() {
+                                      w.status = 'Published';
+                                      w.statusColor = AppColors.success;
+                                    });
+                                    _showSnack('${w.title} approved and synced to Supabase!');
+                                  },
+                                  child: const Text('Review & Approve', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                )
+                              else
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.brandTeal),
+                                      onPressed: () => _openEditWorkoutDialog(w),
+                                    ),
+                                    const Icon(Icons.chevron_right, size: 18, color: AppColors.textSecondary),
+                                  ],
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
-                    );
-                  }),
-                ],
+                    ),
+                  );
+                },
               ),
             ),
           ],
@@ -383,38 +366,7 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: active ? AppColors.brandTeal : const Color(0xFFE5E7EB)),
         ),
-        child: Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: active ? Colors.white : AppColors.textSecondary)),
-      ),
-    );
-  }
-}
-
-class _SummaryBox extends StatelessWidget {
-  final String title;
-  final String value;
-  final String tag;
-  final Color color;
-
-  const _SummaryBox({required this.title, required this.value, required this.tag, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: color, letterSpacing: 0.5)),
-          const SizedBox(height: 2),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-              Text(tag, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color)),
-            ],
-          ),
-        ],
+        child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: active ? Colors.white : AppColors.textSecondary)),
       ),
     );
   }
@@ -423,6 +375,7 @@ class _SummaryBox extends StatelessWidget {
 class _Badge extends StatelessWidget {
   final String text;
   final Color color;
+
   const _Badge({required this.text, required this.color});
 
   @override

@@ -144,14 +144,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
-          },
-        ),
         title: const Row(
           children: [
             Text('Admin Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

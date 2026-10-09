@@ -197,7 +197,7 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: !_isSignUp ? Colors.black : Colors.transparent,
+                            color: !_isSignUp ? AppColors.brandTeal : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: !_isSignUp ? [const BoxShadow(color: Color(0x14000000), blurRadius: 4)] : null,
                           ),
@@ -212,7 +212,7 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: _isSignUp ? Colors.black : Colors.transparent,
+                            color: _isSignUp ? AppColors.brandTeal : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: _isSignUp ? [const BoxShadow(color: Color(0x14000000), blurRadius: 4)] : null,
                           ),

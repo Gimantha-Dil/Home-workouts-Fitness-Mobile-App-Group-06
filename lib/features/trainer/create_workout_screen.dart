@@ -30,7 +30,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   final _exerciseNameController = TextEditingController(text: 'Push Ups (Knee Modified)');
   final _setsController = TextEditingController(text: '3');
   final _repsController = TextEditingController(text: '10');
-  final _restController = TextEditingController(text: '60');
+  final _restController = TextEditingController(text: '30');
   String _exerciseDifficulty = 'Beginner';
 
   // Step 3 - instructions & tips
@@ -131,7 +131,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('⚡ Video "$fileName" uploaded to Supabase Storage (exercise-videos) & saved to Database!'),
+              content: Text('⚡ Video "$fileName" uploaded to Supabase Storage!'),
               backgroundColor: AppColors.brandTeal,
             ),
           );
@@ -175,7 +175,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('⚡ Video uploaded to Supabase Storage (exercise-videos) & saved to Database!'),
+            content: Text('⚡ Video uploaded to Supabase Storage!'),
             backgroundColor: AppColors.brandTeal,
           ),
         );
@@ -220,6 +220,13 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
             level: workout.level,
             duration: '${workout.durationMinutes} min',
             videoUrl: _videoUrl,
+            exerciseName: exerciseName,
+            sets: sets,
+            reps: reps,
+            restSeconds: rest,
+            exerciseDifficulty: _exerciseDifficulty,
+            instructions: instructions,
+            tip: _tipController.text.trim(),
           ),
         ),
       );

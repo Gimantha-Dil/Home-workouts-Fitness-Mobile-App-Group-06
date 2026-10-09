@@ -77,6 +77,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (error != null) {
       _showSnack(error);
+    } else {
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 
@@ -197,73 +199,82 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                if (widget.role != UserRole.admin) ...[
+                  const SizedBox(height: 16),
 
-                // TAB TOGGLE (Log In / Sign Up)
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF3F4F6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _isSignUp = false),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: !_isSignUp ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: !_isSignUp
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.05),
-                                        blurRadius: 4,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            child: Text(
-                              'Log In',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: !_isSignUp ? primary : AppColors.textSecondary,
+                  // TAB TOGGLE (Log In / Sign Up)
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isSignUp = false),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: !_isSignUp ? primary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: !_isSignUp
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.05),
+                                          blurRadius: 4,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Text(
+                                'Log In',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: !_isSignUp ? Colors.white : AppColors.textSecondary,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _isSignUp = true),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: _isSignUp ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              border: _isSignUp
-                                  ? Border.all(color: primary, width: 1.5)
-                                  : null,
-                            ),
-                            child: Text(
-                              'Sign Up',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: _isSignUp ? primary : AppColors.textSecondary,
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isSignUp = true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _isSignUp ? primary : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: _isSignUp
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.05),
+                                          blurRadius: 4,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Text(
+                                'Sign Up',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: _isSignUp ? Colors.white : AppColors.textSecondary,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
 
                 const SizedBox(height: 20),
 

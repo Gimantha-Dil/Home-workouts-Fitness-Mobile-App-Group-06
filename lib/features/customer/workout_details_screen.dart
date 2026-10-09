@@ -1,16 +1,18 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/models/workout_model.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'active_workout_screen.dart';
 import 'exercise_details_screen.dart';
-import 'safety_guidance_screen.dart';
 
 class WorkoutDetailsScreen extends StatefulWidget {
   final Workout workout;
-  const WorkoutDetailsScreen({super.key, required this.workout});
+
+  const WorkoutDetailsScreen({
+    super.key,
+    required this.workout,
+  });
 
   @override
   State<WorkoutDetailsScreen> createState() => _WorkoutDetailsScreenState();
@@ -19,81 +21,21 @@ class WorkoutDetailsScreen extends StatefulWidget {
 class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   bool _isBookmarked = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _checkBookmarkStatus();
-  }
-
-  Future<void> _checkBookmarkStatus() async {
-    final user = fb.FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    try {
-      final docSnap = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('savedWorkouts')
-          .doc(widget.workout.id)
-          .get();
-      if (mounted) {
-        setState(() => _isBookmarked = docSnap.exists);
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _toggleBookmark() async {
-    final user = fb.FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to save workouts.')),
-      );
-      return;
-    }
-
-    final docRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('savedWorkouts')
-        .doc(widget.workout.id);
-
-    try {
-      if (_isBookmarked) {
-        await docRef.delete();
-        if (mounted) {
-          setState(() => _isBookmarked = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Removed from saved workouts.')),
-          );
-        }
-      } else {
-        await docRef.set({
-          'workoutId': widget.workout.id,
-          'title': widget.workout.title,
-          'level': widget.workout.level,
-          'durationMinutes': widget.workout.durationMinutes,
-          'savedAt': FieldValue.serverTimestamp(),
-        });
-        if (mounted) {
-          setState(() => _isBookmarked = true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Workout saved to your collection!')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update bookmark: $e')),
-        );
-      }
-    }
+  void _toggleBookmark() {
+    setState(() => _isBookmarked = !_isBookmarked);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isBookmarked ? 'Added to Bookmarks!' : 'Removed from Bookmarks'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _shareWorkout() {
-    final title = widget.workout.title;
-    final level = widget.workout.level;
-    final duration = widget.workout.durationMinutes;
-    Share.share('$title - $level, $duration min | Check out this routine on FitPulse!');
+    Share.share(
+      'Check out this "${widget.workout.title}" workout on FitPulse! Level: ${widget.workout.level}, Duration: ${widget.workout.durationMinutes} min.',
+      subject: 'FitPulse Workout: ${widget.workout.title}',
+    );
   }
 
   @override
@@ -138,38 +80,38 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(12)),
                     child: const Text('COACH VERIFIED PLAN', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(widget.workout.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(12)),
-                        child: const Text('~140 kcal', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.warning)),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(8)),
+                        child: Text('~${widget.workout.durationMinutes * 7} kcal', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
-                    widget.workout.description.isEmpty
-                        ? 'A simple full-body workout designed for beginners to build foundational strength, mobility, and healthy habits.'
-                        : widget.workout.description,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                    widget.workout.description.isNotEmpty
+                        ? widget.workout.description
+                        : 'Custom trainer workout routine published to FitPulse catalog.',
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                   ),
                   const SizedBox(height: 16),
-                  // Info Tags Row
+                  // Workout Meta Grid
                   Row(
                     children: [
-                      _infoTag(Icons.timer_outlined, 'Duration', '${widget.workout.durationMinutes} min'),
+                      Expanded(child: _metaCard('Duration', '${widget.workout.durationMinutes} min', Icons.timer_outlined)),
                       const SizedBox(width: 8),
-                      _infoTag(Icons.grid_view, 'Movements', '${widget.workout.exercises.length} Drills'),
+                      Expanded(child: _metaCard('Movements', '${widget.workout.exercises.length} Drills', Icons.grid_view)),
                       const SizedBox(width: 8),
-                      _infoTag(Icons.fitness_center_outlined, 'Equipment', 'Bodyweight'),
+                      Expanded(child: _metaCard('Equipment', 'Bodyweight', Icons.fitness_center)),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Form Cue Card
+                  // Form Cue Banner
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -179,12 +121,12 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.tips_and_updates_outlined, color: AppColors.warning, size: 18),
-                        SizedBox(width: 10),
+                        Icon(Icons.lightbulb_outline, color: Color(0xFFD97706), size: 18),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Form cue: Breathe out during effort, maintain soft knees, and keep a light smile!',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF78350F), fontWeight: FontWeight.w500),
+                            style: TextStyle(fontSize: 10, color: Color(0xFF78350F), fontWeight: FontWeight.w600),
                           ),
                         ),
                       ],
@@ -194,24 +136,42 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Exercises', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('${widget.workout.exercises.length} Total • 3 Sets Each', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                      const Text('Exercises', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      Text('${widget.workout.exercises.length} Total • ${widget.workout.level}', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   ...widget.workout.exercises.asMap().entries.map((entry) {
-                    final i = entry.key + 1;
+                    final idx = entry.key + 1;
                     final e = entry.value;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: AppCard(
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExerciseDetailsScreen(exercise: e))),
+                        padding: const EdgeInsets.all(12),
+                        onTap: () {
+                          final exerciseWithVideo = (e.videoUrl != null && e.videoUrl!.isNotEmpty)
+                              ? e
+                              : Exercise(
+                                  id: e.id,
+                                  name: e.name,
+                                  sets: e.sets,
+                                  reps: e.reps,
+                                  restSeconds: e.restSeconds,
+                                  difficulty: e.difficulty,
+                                  instructions: e.instructions,
+                                  tip: e.tip,
+                                  videoUrl: widget.workout.videoUrl,
+                                );
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => ExerciseDetailsScreen(exercise: exerciseWithVideo)),
+                          );
+                        },
                         child: Row(
                           children: [
                             CircleAvatar(
-                              radius: 12,
-                              backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12),
-                              child: Text('$i', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                              radius: 14,
+                              backgroundColor: const Color(0xFFCCFBF1),
+                              child: Text('$idx', style: const TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 11)),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -221,18 +181,25 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                   Row(
                                     children: [
                                       Text(e.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                      if (i == 2) ...[
+                                      if (e.videoUrl != null && e.videoUrl!.isNotEmpty || (widget.workout.videoUrl != null && widget.workout.videoUrl!.isNotEmpty)) ...[
                                         const SizedBox(width: 6),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(8)),
-                                          child: const Text('Key Exercise', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                          decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(6)),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.play_circle_fill, size: 10, color: AppColors.brandTeal),
+                                              SizedBox(width: 2),
+                                              Text('VIDEO', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                            ],
+                                          ),
                                         ),
                                       ],
                                     ],
                                   ),
                                   const SizedBox(height: 2),
-                                  Text('${e.sets} sets • ${e.reps} reps • Rest 30s', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                                  Text('${e.sets} sets • ${e.reps} reps • Rest ${e.restSeconds}s', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                                 ],
                               ),
                             ),
@@ -268,8 +235,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                         ),
                         const SizedBox(height: 8),
                         GestureDetector(
-                          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SafetyGuidanceScreen(workout: widget.workout))),
-                          child: const Text('Read Safety Guidance →', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                          onTap: () {},
+                          child: const Text('Read Safety Guidance →', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 11)),
                         ),
                       ],
                     ),
@@ -280,8 +247,18 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             Padding(
               padding: const EdgeInsets.all(20),
               child: PrimaryButton(
-                label: 'Start Workout  •  ${widget.workout.durationMinutes} min',
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SafetyGuidanceScreen(workout: widget.workout))),
+                label: 'Start Workout • ${widget.workout.durationMinutes} min',
+                onPressed: () {
+                  if (!widget.workout.hasExercises) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('This workout has no exercises yet.')),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => ActiveWorkoutScreen(workout: widget.workout)),
+                  );
+                },
               ),
             ),
           ],
@@ -290,19 +267,17 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     );
   }
 
-  Widget _infoTag(IconData icon, String label, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.border)),
-        child: Column(
-          children: [
-            Icon(icon, size: 16, color: AppColors.brandTeal),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-            Text(value, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-          ],
-        ),
+  Widget _metaCard(String label, String val, IconData icon) {
+    return AppCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.brandTeal, size: 18),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(fontSize: 8, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 2),
+          Text(val, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }

@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +12,8 @@ import '../../core/theme/app_theme.dart';
 import '../../main.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import 'advisor_chat_screen.dart';
+import 'advisor_selection_screen.dart';
 import 'customer_shell.dart';
 import 'profile_setup_screen.dart';
 import 'settings_screen.dart';
@@ -31,7 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    if (Platform.isAndroid) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       _checkLostData();
     }
   }
@@ -155,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const Text('Auto-Sync Heart Rate Telemetry', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   Switch(
                     value: _healthSyncActive,
-                    activeThumbColor: AppColors.brandTeal,
+                    activeColor: AppColors.brandTeal,
                     onChanged: (v) {
                       setDialogState(() => _healthSyncActive = v);
                       setState(() => _healthSyncActive = v);
@@ -448,6 +450,127 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileSetupScreen())),
                           child: const Text('Update Biometrics & Goals →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Healthcare Advisor Supervision Card
+            StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance.collection('users').doc(user?.id ?? '').snapshots(),
+              builder: (context, docSnap) {
+                final data = docSnap.data?.data();
+                final assignedId = data?['assignedAdvisorId']?.toString();
+                final assignedName = data?['assignedAdvisorName']?.toString();
+                final assignedSpecialty = data?['assignedAdvisorSpecialty']?.toString();
+                final assignedPhotoUrl = data?['assignedAdvisorPhotoUrl']?.toString();
+
+                final hasAdvisor = assignedId != null && assignedId.isNotEmpty;
+
+                if (!hasAdvisor) {
+                  return AppCard(
+                    padding: const EdgeInsets.all(14),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AdvisorSelectionScreen()),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12),
+                          child: const Icon(Icons.medical_services_outlined, color: AppColors.brandTeal, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('No Medical Advisor Selected', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              SizedBox(height: 2),
+                              Text('Tap to select a certified doctor for workout safety', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.brandTeal,
+                            minimumSize: const Size(70, 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const AdvisorSelectionScreen()),
+                          ),
+                          child: const Text('Select', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return AppCard(
+                  padding: const EdgeInsets.all(14),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AdvisorSelectionScreen()),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.medical_services_outlined, color: AppColors.brandTeal, size: 18),
+                          const SizedBox(width: 8),
+                          const Text('Personal Medical Advisor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(6)),
+                            child: const Text('SUPERVISED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: const Color(0xFFCCFBF1),
+                            child: ClipOval(
+                              child: AppNetworkImage(
+                                url: assignedPhotoUrl,
+                                width: 40,
+                                height: 40,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(assignedName ?? 'Doctor', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                Text(assignedSpecialty ?? 'Sports Medicine', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.chat_bubble_outline, color: AppColors.brandTeal, size: 20),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => AdvisorChatScreen(
+                                  advisorId: assignedId,
+                                  advisorName: assignedName ?? 'Doctor',
+                                  advisorSpecialty: assignedSpecialty ?? 'Sports Medicine',
+                                  advisorPhotoUrl: assignedPhotoUrl,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
+                        ],
                       ),
                     ],
                   ),

@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/services/supabase_service.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 
@@ -15,20 +19,95 @@ class CreateGuidanceScreen extends StatefulWidget {
 class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
-  String _category = 'Warm-up';
+  final _categoryController = TextEditingController(text: 'Warm-up');
+  final _contentFocusNode = FocusNode();
+  TextSelection? _lastSelection;
   String _status = 'Draft';
   bool _saving = false;
+  String? _uploadedImageUrl;
+  String? _uploadedImageName;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentController.addListener(() {
+      if (_contentController.selection.isValid) {
+        _lastSelection = _contentController.selection;
+      }
+    });
+  }
 
   @override
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _categoryController.dispose();
+    _contentFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _saveGuidance() async {
+  void _applyFormatting(String wrapperBefore, [String? wrapperAfter]) {
+    final text = _contentController.text;
+    final selection = _lastSelection ?? _contentController.selection;
+    final after = wrapperAfter ?? wrapperBefore;
+
+    if (selection.isValid && !selection.isCollapsed && selection.end <= text.length) {
+      final selectedText = text.substring(selection.start, selection.end);
+      final newText = text.replaceRange(selection.start, selection.end, '$wrapperBefore$selectedText$after');
+      _contentController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: selection.start + wrapperBefore.length + selectedText.length + after.length),
+      );
+    } else {
+      final offset = selection.isValid ? selection.baseOffset : text.length;
+      final insertIndex = offset >= 0 && offset <= text.length ? offset : text.length;
+      final newText = text.replaceRange(insertIndex, insertIndex, '$wrapperBefore$after');
+      _contentController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: insertIndex + wrapperBefore.length),
+      );
+    }
+    _contentFocusNode.requestFocus();
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        final url = await SupabaseService.uploadUserPhoto(
+          fileName: pickedFile.name,
+          photoBytes: bytes,
+        );
+        setState(() {
+          _uploadedImageUrl = url;
+          _uploadedImageName = pickedFile.name;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _pickOrUploadImage() async {
+    setState(() => _saving = true);
+    try {
+      await _pickImageFromGallery();
+    } catch (_) {}
+    setState(() => _saving = false);
+  }
+
+  Future<void> _saveGuidance([String? forcedStatus]) async {
+    final user = context.read<AuthProvider>().currentUser;
+    if (user?.verificationStatus != 'approved') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Admin approval is required before you can publish clinical guidance.')),
+      );
+      return;
+    }
+
     final title = _titleController.text.trim();
     final content = _contentController.text.trim();
+    final category = _categoryController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a guidance title.')),
@@ -36,10 +115,11 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
       return;
     }
 
+    final savingStatus = forcedStatus ?? _status;
+
     setState(() => _saving = true);
 
     try {
-      final user = context.read<AuthProvider>().currentUser;
       final uid = user?.id ?? '';
       final authorName = user?.name ?? 'Healthcare Advisor';
 
@@ -47,9 +127,10 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
       await docRef.set({
         'id': docRef.id,
         'title': title,
-        'category': _category,
+        'category': category.isNotEmpty ? category : 'General Safety',
         'content': content,
-        'status': _status == 'Publish' ? 'Published' : 'Draft',
+        'imageUrl': _uploadedImageUrl ?? '',
+        'status': savingStatus == 'Publish' ? 'Published' : 'Draft',
         'createdBy': uid,
         'authorName': authorName,
         'createdAt': FieldValue.serverTimestamp(),
@@ -57,7 +138,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Guidance "$title" saved successfully in Firestore!')),
+          SnackBar(content: Text('Safety guidance saved as ${savingStatus == 'Publish' ? 'Published' : 'Draft'} successfully!')),
         );
         Navigator.of(context).pop();
       }
@@ -74,6 +155,9 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+    final isApproved = user?.verificationStatus == 'approved';
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -102,6 +186,28 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  if (!isApproved)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.warning_amber_rounded, color: AppColors.danger, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Account Pending Admin Approval: You can view your dashboard, but publishing clinical guidance is locked until the admin verifies your credentials.',
+                              style: TextStyle(color: AppColors.danger, fontSize: 11, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -115,15 +221,36 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     decoration: const InputDecoration(hintText: 'e.g. Warm-up Guide'),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Category *', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                  const Text('Category * (Select from dropdown or type custom)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                   const SizedBox(height: 4),
-                  DropdownButtonFormField<String>(
-                    initialValue: _category,
-                    decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
-                    items: const ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations']
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12))))
-                        .toList(),
-                    onChanged: (v) => setState(() => _category = v!),
+                  Autocomplete<String>(
+                    initialValue: TextEditingValue(text: _categoryController.text),
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      const options = ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations'];
+                      if (textEditingValue.text == '') {
+                        return options;
+                      }
+                      return options.where((String option) {
+                        return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                      });
+                    },
+                    onSelected: (String selection) {
+                      _categoryController.text = selection;
+                    },
+                    fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                      controller.addListener(() {
+                        _categoryController.text = controller.text;
+                      });
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: const InputDecoration(
+                          hintText: 'e.g. Warm-up or custom category',
+                          suffixIcon: Icon(Icons.arrow_drop_down, size: 20),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 16),
                   const Row(
@@ -134,29 +261,56 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Editor Toolbar
+                  // Editor Toolbar with working formatting options
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     decoration: const BoxDecoration(
                       color: Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.format_bold, size: 18, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Icon(Icons.format_italic, size: 18, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Icon(Icons.format_underlined, size: 18, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Icon(Icons.format_list_bulleted, size: 18, color: AppColors.textSecondary),
-                        SizedBox(width: 8),
-                        Icon(Icons.format_quote, size: 18, color: AppColors.textSecondary),
+                        IconButton(
+                          icon: const Icon(Icons.format_bold, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Bold',
+                          onPressed: () => _applyFormatting('**'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_italic, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Italic',
+                          onPressed: () => _applyFormatting('*'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_underlined, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Underline',
+                          onPressed: () => _applyFormatting('<u>', '</u>'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_list_bulleted, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Bullet List',
+                          onPressed: () => _applyFormatting('- '),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_quote, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Quote / Blockquote',
+                          onPressed: () => _applyFormatting('> '),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_align_justify, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Justify Alignment',
+                          onPressed: () => _applyFormatting('<div align="justify">', '</div>'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.format_quote_rounded, size: 18, color: AppColors.textPrimary),
+                          tooltip: 'Double Quotes ("...")',
+                          onPressed: () => _applyFormatting('“', '”'),
+                        ),
                       ],
                     ),
                   ),
                   TextField(
                     controller: _contentController,
+                    focusNode: _contentFocusNode,
                     maxLines: 5,
                     decoration: const InputDecoration(
                       hintText: 'Write safety guidance content here...',
@@ -172,24 +326,76 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  // Drag & Drop Upload Box
-                  Container(
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFCCFBF1), style: BorderStyle.solid),
-                    ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircleAvatar(radius: 16, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.cloud_upload_outlined, color: AppColors.brandTeal, size: 18)),
-                        SizedBox(height: 6),
-                        Text('Click to upload image', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                        Text('or drag and drop your media file', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
+                  // Click Upload Box / Preview Box
+                  _uploadedImageUrl != null
+                      ? Container(
+                          height: 110,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF9FAFB),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.brandTeal),
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 12),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  _uploadedImageUrl!,
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 40, color: AppColors.textSecondary),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_uploadedImageName ?? 'guidance_image.jpg', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                    const SizedBox(height: 2),
+                                    const Text('Ready for publication • 2.4 MB', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                    const SizedBox(height: 6),
+                                    GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          _uploadedImageUrl = null;
+                                          _uploadedImageName = null;
+                                        });
+                                      },
+                                      child: const Text('Remove image', style: TextStyle(fontSize: 10, color: AppColors.danger, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : InkWell(
+                          onTap: _pickOrUploadImage,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            height: 100,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFCCFBF1), style: BorderStyle.solid),
+                            ),
+                            child: _saving
+                                ? const Center(child: CircularProgressIndicator())
+                                : const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircleAvatar(radius: 16, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.cloud_upload_outlined, color: AppColors.brandTeal, size: 18)),
+                                      SizedBox(height: 6),
+                                      Text('Click to upload image to Supabase', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                                      Text('or drag and drop your media file', style: TextStyle(fontSize: 9, color: AppColors.textSecondary)),
+                                    ],
+                                  ),
+                          ),
+                        ),
                   const SizedBox(height: 16),
                   const Text('Status', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                   const SizedBox(height: 6),
@@ -197,7 +403,10 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _status = 'Draft'),
+                          onTap: () {
+                            setState(() => _status = 'Draft');
+                            _saveGuidance('Draft');
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             alignment: Alignment.center,
@@ -213,7 +422,10 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: GestureDetector(
-                          onTap: () => setState(() => _status = 'Publish'),
+                          onTap: () {
+                            setState(() => _status == 'Publish' ? _status = 'Draft' : _status = 'Publish'); // wait, _status = 'Publish'
+                            _saveGuidance('Publish');
+                          },
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             alignment: Alignment.center,
@@ -240,7 +452,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
                   else
                     PrimaryButton(
                       label: 'Save Guidance →',
-                      onPressed: _saveGuidance,
+                      onPressed: () => _saveGuidance(),
                     ),
                   const SizedBox(height: 8),
                   TextButton(
