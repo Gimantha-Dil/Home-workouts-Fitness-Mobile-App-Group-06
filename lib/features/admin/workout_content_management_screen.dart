@@ -214,7 +214,7 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
               Navigator.of(context).pop();
             } else {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => AdminDashboardScreen()),
+                MaterialPageRoute(builder: (_) => const AdminShell()),
               );
             }
           },
