@@ -5,6 +5,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
+import '../customer/advisor_chat_screen.dart';
 import 'create_guidance_screen.dart';
 import 'health_considerations_screen.dart';
 import 'safety_content_screen.dart';
@@ -92,7 +93,7 @@ class AdvisorDashboardScreen extends StatelessWidget {
                 const Text('CATEGORY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
-                  value: ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations'].contains(category) ? category : 'Warm-up',
+                  initialValue: ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations'].contains(category) ? category : 'Warm-up',
                   items: const ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations']
                       .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12))))
                       .toList(),
@@ -106,7 +107,7 @@ class AdvisorDashboardScreen extends StatelessWidget {
                 const Text('STATUS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
                 const SizedBox(height: 4),
                 DropdownButtonFormField<String>(
-                  value: ['Published', 'Draft', 'Pending'].contains(status) ? status : 'Published',
+                  initialValue: ['Published', 'Draft', 'Pending'].contains(status) ? status : 'Published',
                   items: const ['Published', 'Draft', 'Pending']
                       .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12))))
                       .toList(),
@@ -314,31 +315,147 @@ class AdvisorDashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Consult Rhythm Banner
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFBAE6FD)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('WEEKLY CONSULT RHYTHM', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.info, letterSpacing: 0.5)),
-                            const SizedBox(height: 2),
-                            Text('$activeGuides Clinical Protocols Live', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 2),
-                            const Text('↗ 100% Doctor-verified clinical safety', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-                          ],
+                // Patient Consultations & Messages Section
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('PATIENT CONSULTATIONS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                    Text('Live Firestore Chat', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance.collection('chats').snapshots(),
+                  builder: (context, chatSnap) {
+                    final allChats = chatSnap.data?.docs.map((d) => d.data()).toList() ?? [];
+
+                    final myChats = allChats.where((c) {
+                      final advId = c['advisorUid']?.toString() ?? '';
+                      final idStr = c['id']?.toString() ?? '';
+                      return advId == uid || idStr.contains(uid) || uid.isEmpty;
+                    }).toList();
+
+                    final displayChats = myChats.isNotEmpty ? myChats : allChats;
+
+                    if (displayChats.isEmpty) {
+                      return InkWell(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => AdvisorChatScreen(
+                                advisorId: uid.isNotEmpty ? uid : 'adv_biyuni_104',
+                                advisorName: user?.name ?? 'Dr. Biyuni Tharuka',
+                                advisorSpecialty: 'Sports Medicine & Cardiology',
+                                advisorPhotoUrl: user?.profilePhotoUrl,
+                              ),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.brandTeal, width: 1.5),
+                          ),
+                          child: Row(
+                            children: [
+                              const CircleAvatar(
+                                radius: 18,
+                                backgroundColor: Color(0xFFCCFBF1),
+                                child: Icon(Icons.chat_bubble_outline, color: AppColors.brandTeal, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Open Clinical Chat Line 💬', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.brandTeal)),
+                                    Text('Tap to open patient consultation room and message trainees.', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.brandTeal),
+                            ],
+                          ),
                         ),
-                      ),
-                      const Icon(Icons.show_chart, color: AppColors.info, size: 36),
-                    ],
-                  ),
+                      );
+                    }
+
+                    return Column(
+                      children: displayChats.map((c) {
+                        final customerName = c['customerName']?.toString() ?? 'Trainee Patient';
+                        final customerUid = c['customerUid']?.toString();
+                        final lastMsg = c['lastMessage']?.toString() ?? 'Consultation question';
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: AppCard(
+                            padding: const EdgeInsets.all(12),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => AdvisorChatScreen(
+                                    advisorId: uid.isNotEmpty ? uid : 'adv_biyuni_104',
+                                    advisorName: user?.name ?? 'Dr. Biyuni Tharuka',
+                                    advisorSpecialty: 'Sports Medicine & Cardiology',
+                                    advisorPhotoUrl: user?.profilePhotoUrl,
+                                    customerUid: customerUid,
+                                    customerName: customerName,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                const CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: Color(0xFFE0F2FE),
+                                  child: Icon(Icons.person, color: AppColors.info, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                      const SizedBox(height: 2),
+                                      Text(lastMsg, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    ],
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.brandTeal,
+                                    minimumSize: const Size(80, 32),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => AdvisorChatScreen(
+                                          advisorId: uid.isNotEmpty ? uid : 'adv_biyuni_104',
+                                          advisorName: user?.name ?? 'Dr. Biyuni Tharuka',
+                                          advisorSpecialty: 'Sports Medicine & Cardiology',
+                                          advisorPhotoUrl: user?.profilePhotoUrl,
+                                          customerUid: customerUid,
+                                          customerName: customerName,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text('Reply 💬', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
 
@@ -452,7 +569,13 @@ class _AdvisorStatBox extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _AdvisorStatBox({required this.value, required this.label, required this.tag, required this.icon, required this.color});
+  const _AdvisorStatBox({
+    required this.value,
+    required this.label,
+    this.tag = '',
+    required this.icon,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {

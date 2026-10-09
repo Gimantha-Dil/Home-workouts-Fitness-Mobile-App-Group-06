@@ -9,6 +9,8 @@ class AdvisorChatScreen extends StatefulWidget {
   final String advisorName;
   final String advisorSpecialty;
   final String? advisorPhotoUrl;
+  final String? customerUid;
+  final String? customerName;
 
   const AdvisorChatScreen({
     super.key,
@@ -16,6 +18,8 @@ class AdvisorChatScreen extends StatefulWidget {
     required this.advisorName,
     required this.advisorSpecialty,
     this.advisorPhotoUrl,
+    this.customerUid,
+    this.customerName,
   });
 
   @override
@@ -27,8 +31,14 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
   final ScrollController _scrollController = ScrollController();
 
   String get _chatId {
-    final uid = fb.FirebaseAuth.instance.currentUser?.uid ?? 'guest';
-    return '${uid}_${widget.advisorId}';
+    final user = fb.FirebaseAuth.instance.currentUser;
+    final myUid = user?.uid ?? 'guest';
+    final otherUid = (myUid == widget.advisorId && widget.customerUid != null && widget.customerUid!.isNotEmpty)
+        ? widget.customerUid!
+        : widget.advisorId;
+
+    final uids = [myUid, otherUid]..sort();
+    return '${uids[0]}_${uids[1]}';
   }
 
   @override
@@ -46,16 +56,33 @@ class _AdvisorChatScreenState extends State<AdvisorChatScreen> {
     if (user == null) return;
 
     _msgController.clear();
+    final senderName = user.displayName ?? 'FitPulse User';
+    final chatId = _chatId;
 
     try {
-      await FirebaseFirestore.instance
-          .collection('chats')
-          .doc(_chatId)
-          .collection('messages')
-          .add({
+      final chatDocRef = FirebaseFirestore.instance.collection('chats').doc(chatId);
+
+      // 1. Explicitly create Parent Chat document in Firestore
+      await chatDocRef.set({
+        'id': chatId,
+        'customerUid': (user.uid == widget.advisorId && widget.customerUid != null)
+            ? widget.customerUid!
+            : user.uid,
+        'customerName': (user.uid == widget.advisorId && widget.customerName != null)
+            ? widget.customerName!
+            : senderName,
+        'advisorUid': widget.advisorId,
+        'advisorName': widget.advisorName,
+        'lastMessage': text,
+        'lastSenderId': user.uid,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // 2. Add Message to subcollection
+      await chatDocRef.collection('messages').add({
         'senderId': user.uid,
-        'senderName': user.displayName ?? 'Customer',
-        'receiverId': widget.advisorId,
+        'senderName': senderName,
+        'receiverId': user.uid == widget.advisorId ? (widget.customerUid ?? '') : widget.advisorId,
         'text': text,
         'timestamp': FieldValue.serverTimestamp(),
       });
