@@ -31,6 +31,8 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().currentUser;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -70,6 +72,7 @@ class _WorkoutManagementScreenState extends State<WorkoutManagementScreen> {
         child: StreamBuilder<List<Workout>>(
           stream: SupabaseService.streamWorkoutsFromSupabase(),
           builder: (context, snapshot) {
+            final user = context.watch<AuthProvider>().currentUser;
             final docs = snapshot.data ?? [];
 
             var filtered = docs;
