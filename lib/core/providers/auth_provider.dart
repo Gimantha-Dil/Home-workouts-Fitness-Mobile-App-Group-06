@@ -46,20 +46,35 @@ class AuthProvider extends ChangeNotifier {
         .collection('users')
         .doc(fbUser.uid)
         .snapshots()
-        .listen((snap) {
+        .listen((snap) async {
       if (snap.exists && snap.data() != null) {
         final data = snap.data()!;
         _currentUser = User.fromJson(data);
       } else {
         final cleanEmail = fbUser.email?.toLowerCase() ?? '';
         final isSuperAdmin = cleanEmail == 'gimantha333@gmail.com';
-        _currentUser = User(
+        final newUser = User(
           id: fbUser.uid,
-          name: fbUser.displayName ?? (isSuperAdmin ? 'Gimantha (Admin)' : 'FitPulse User'),
+          name: fbUser.displayName ?? (isSuperAdmin ? 'Gimantha (Admin)' : cleanEmail.split('@').first),
           email: cleanEmail,
           role: isSuperAdmin ? UserRole.admin : UserRole.customer,
           profilePhotoUrl: fbUser.photoURL,
+          verificationStatus: 'none',
         );
+
+        try {
+          await FirebaseFirestore.instance.collection('users').doc(fbUser.uid).set({
+            'id': newUser.id,
+            'name': newUser.name,
+            'email': newUser.email,
+            'role': newUser.role.name,
+            'verificationStatus': newUser.verificationStatus,
+            'photoUrl': newUser.profilePhotoUrl,
+            'createdAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        } catch (_) {}
+
+        _currentUser = newUser;
       }
       _isLoading = false;
       notifyListeners();
