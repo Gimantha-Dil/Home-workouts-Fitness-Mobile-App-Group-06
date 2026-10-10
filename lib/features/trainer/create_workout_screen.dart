@@ -82,7 +82,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.video,
         allowMultiple: false,
-        withData: true,
+        withData: kIsWeb,
       );
 
       if (result != null && result.files.isNotEmpty) {

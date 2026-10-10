@@ -331,14 +331,17 @@ class AdvisorDashboardScreen extends StatelessWidget {
                     final allChats = chatSnap.data?.docs.map((d) => d.data()).toList() ?? [];
 
                     final myChats = allChats.where((c) {
-                      final advId = c['advisorUid']?.toString() ?? '';
-                      final idStr = c['id']?.toString() ?? '';
-                      return advId == uid || idStr.contains(uid) || uid.isEmpty;
+                      final advUid = c['advisorUid']?.toString() ?? '';
+                      final advName = (c['advisorName'] ?? '').toString().toLowerCase();
+                      final myName = (user?.name ?? '').toLowerCase();
+
+                      final isMyUid = uid.isNotEmpty && (advUid == uid || c['id']?.toString().contains(uid) == true);
+                      final isMyName = myName.isNotEmpty && advName.contains(myName);
+
+                      return isMyUid || isMyName;
                     }).toList();
 
-                    final displayChats = myChats.isNotEmpty ? myChats : allChats;
-
-                    if (displayChats.isEmpty) {
+                    if (myChats.isEmpty) {
                       return InkWell(
                         onTap: () {
                           Navigator.of(context).push(
@@ -358,7 +361,7 @@ class AdvisorDashboardScreen extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: AppColors.brandTeal, width: 1.5),
+                            border: Border.all(color: AppColors.border),
                           ),
                           child: Row(
                             children: [
@@ -372,12 +375,11 @@ class AdvisorDashboardScreen extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Open Clinical Chat Line', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.brandTeal)),
-                                    Text('Tap to open patient consultation room and message trainees.', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                                    Text('No Pending Patient Messages for ${user?.name ?? "You"}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                    Text('When trainees message ${user?.name ?? "you"}, their health queries appear here in real-time.', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                                   ],
                                 ),
                               ),
-                              const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.brandTeal),
                             ],
                           ),
                         ),
@@ -385,7 +387,7 @@ class AdvisorDashboardScreen extends StatelessWidget {
                     }
 
                     return Column(
-                      children: displayChats.map((c) {
+                      children: myChats.map((c) {
                         final customerName = c['customerName']?.toString() ?? 'Trainee Patient';
                         final customerUid = c['customerUid']?.toString();
                         final lastMsg = c['lastMessage']?.toString() ?? 'Consultation question';

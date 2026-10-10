@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -114,7 +115,7 @@ class _CreateGuidanceScreenState extends State<CreateGuidanceScreen> {
   Future<void> _pickOrUploadImage() async {
     setState(() => _saving = true);
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+      final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: kIsWeb);
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
         final name = file.name;
