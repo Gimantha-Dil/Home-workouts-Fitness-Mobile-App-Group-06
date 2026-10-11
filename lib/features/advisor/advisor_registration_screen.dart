@@ -59,6 +59,38 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
     );
   }
 
+  InputDecoration _inputDecor({
+    required String hint,
+    required IconData prefixIcon,
+    required bool isValid,
+    required bool isEmpty,
+    Widget? customSuffix,
+  }) {
+    Color borderColor = const Color(0xFFE5E7EB);
+    if (!isEmpty) {
+      borderColor = isValid ? AppColors.success : AppColors.danger;
+    }
+
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(prefixIcon, color: !isEmpty && isValid ? AppColors.brandTeal : AppColors.textSecondary),
+      suffixIcon: customSuffix ??
+          (!isEmpty
+              ? Icon(isValid ? Icons.check_circle : Icons.error_outline,
+                  color: isValid ? AppColors.success : AppColors.danger, size: 18)
+              : null),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: borderColor, width: !isEmpty ? 1.5 : 1.0),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: !isEmpty && !isValid ? AppColors.danger : AppColors.brandTeal, width: 2.0),
+      ),
+    );
+  }
+
   Future<void> _loginWithGoogle() async {
     setState(() => _loading = true);
     final authProvider = context.read<AuthProvider>();
@@ -264,13 +296,11 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
                 TextField(
                   controller: _nameController,
                   enabled: !_loading,
-                  decoration: InputDecoration(
-                    hintText: 'Dr. Alex Morgan, MD',
-                    prefixIcon: const Icon(Icons.person_outline),
-                    suffixIcon: _nameController.text.isNotEmpty
-                        ? Icon(_isNameValid ? Icons.check_circle : Icons.error_outline,
-                            color: _isNameValid ? AppColors.success : AppColors.danger, size: 18)
-                        : null,
+                  decoration: _inputDecor(
+                    hint: 'Dr. Alex Morgan, MD',
+                    prefixIcon: Icons.person_outline,
+                    isValid: _isNameValid,
+                    isEmpty: _nameController.text.trim().isEmpty,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -296,13 +326,11 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
                 controller: _emailController,
                 enabled: !_loading,
                 keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(
-                  hintText: 'alex.morgan@healthclinic.org',
-                  prefixIcon: const Icon(Icons.alternate_email),
-                  suffixIcon: _emailController.text.isNotEmpty
-                      ? Icon(_isEmailValid ? Icons.check_circle : Icons.error_outline,
-                          color: _isEmailValid ? AppColors.success : AppColors.danger, size: 18)
-                      : null,
+                decoration: _inputDecor(
+                  hint: 'alex.morgan@healthclinic.org',
+                  prefixIcon: Icons.alternate_email,
+                  isValid: _isEmailValid,
+                  isEmpty: _emailController.text.trim().isEmpty,
                 ),
               ),
               const SizedBox(height: 14),
@@ -327,10 +355,12 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
                 controller: _passwordController,
                 enabled: !_loading,
                 obscureText: _obscure,
-                decoration: InputDecoration(
-                  hintText: 'Enter password',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: Row(
+                decoration: _inputDecor(
+                  hint: 'Enter password',
+                  prefixIcon: Icons.lock_outline,
+                  isValid: _isPasswordValid,
+                  isEmpty: _passwordController.text.isEmpty,
+                  customSuffix: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_passwordController.text.isNotEmpty)
@@ -367,10 +397,12 @@ class _AdvisorRegistrationScreenState extends State<AdvisorRegistrationScreen> {
                   controller: _confirmPasswordController,
                   enabled: !_loading,
                   obscureText: _obscureConfirm,
-                  decoration: InputDecoration(
-                    hintText: 'Re-enter password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: Row(
+                  decoration: _inputDecor(
+                    hint: 'Re-enter password',
+                    prefixIcon: Icons.lock_outline,
+                    isValid: _isConfirmPasswordValid,
+                    isEmpty: _confirmPasswordController.text.isEmpty,
+                    customSuffix: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (_confirmPasswordController.text.isNotEmpty)
