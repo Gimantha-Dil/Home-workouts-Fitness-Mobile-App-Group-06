@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/language_provider.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../main.dart';
@@ -185,27 +186,33 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
   }
 
   void _openLanguageDialog() {
+    final langProvider = context.read<LanguageProvider>();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Select Language', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: Text(context.tr('language'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: ['English', 'Sinhala (සිංහල)', 'Tamil (தமிழ்)'].map((l) {
-            return RadioListTile<String>(
-              title: Text(l, style: const TextStyle(fontSize: 13)),
-              value: l,
-              groupValue: _language,
-              activeColor: AppColors.brandTeal,
-              onChanged: (v) {
-                setState(() => _language = v!);
-                Navigator.of(ctx).pop();
-                _showSnack('Language set to $_language');
-              },
-            );
-          }).toList(),
+          children: [
+            _langTile(ctx, langProvider, 'English (US)', AppLanguage.en),
+            _langTile(ctx, langProvider, 'Sinhala (සිංහල)', AppLanguage.si),
+            _langTile(ctx, langProvider, 'Tamil (தமிழ்)', AppLanguage.ta),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _langTile(BuildContext ctx, LanguageProvider langProvider, String label, AppLanguage lang) {
+    final isSelected = langProvider.currentLanguage == lang;
+    return ListTile(
+      title: Text(label, style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppColors.brandTeal : AppColors.textPrimary)),
+      trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.brandTeal, size: 20) : null,
+      onTap: () {
+        langProvider.setLanguage(lang);
+        Navigator.of(ctx).pop();
+        _showSnack(lang == AppLanguage.si ? 'භාෂාව සිංහල වෙත වෙනස් කරන ලදී' : lang == AppLanguage.ta ? 'மொழி தமிழுக்கு மாற்றப்பட்டது' : 'Language set to English');
+      },
     );
   }
 

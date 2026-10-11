@@ -1,11 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../customer/advisor_chat_screen.dart';
+import 'advisor_analytics_screen.dart';
 import 'create_guidance_screen.dart';
 import 'health_considerations_screen.dart';
 import 'safety_content_screen.dart';
@@ -74,80 +77,148 @@ class AdvisorDashboardScreen extends StatelessWidget {
     String category = initialCategory;
     final contentController = TextEditingController(text: initialContent);
     String status = initialStatus;
+    String imageUrl = initialImageUrl;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Safety Guidance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: SizedBox(
-          width: 400,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('TITLE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                TextField(controller: titleController),
-                const SizedBox(height: 12),
-                const Text('CATEGORY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
-                  initialValue: ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations'].contains(category) ? category : 'Warm-up',
-                  items: const ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations']
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12))))
-                      .toList(),
-                  onChanged: (v) => category = v!,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          bool uploadingImage = false;
+          return AlertDialog(
+            title: const Text('Edit Safety Guidance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            content: SizedBox(
+              width: 400,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('TITLE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                    const SizedBox(height: 4),
+                    TextField(controller: titleController),
+                    const SizedBox(height: 12),
+                    const Text('CATEGORY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<String>(
+                      initialValue: ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations'].contains(category) ? category : 'Warm-up',
+                      items: const ['Warm-up', 'Cool-down', 'Precautions', 'Warning Signs', 'Health Considerations']
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 12))))
+                          .toList(),
+                      onChanged: (v) => category = v!,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('CONTENT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                    const SizedBox(height: 4),
+                    TextField(controller: contentController, maxLines: 4),
+                    const SizedBox(height: 12),
+                    const Text('GUIDANCE IMAGE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        if (imageUrl.isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              imageUrl,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, size: 40, color: AppColors.textSecondary),
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(8)),
+                            child: const Icon(Icons.image_outlined, color: AppColors.textSecondary),
+                          ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AppColors.brandTeal),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            onPressed: () async {
+                              setDialogState(() => uploadingImage = true);
+                              try {
+                                final picker = ImagePicker();
+                                final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                                if (pickedFile != null) {
+                                  final bytes = await pickedFile.readAsBytes();
+                                  final url = await SupabaseService.uploadUserPhoto(
+                                    fileName: pickedFile.name,
+                                    photoBytes: bytes,
+                                  );
+                                  setDialogState(() {
+                                    imageUrl = url;
+                                    uploadingImage = false;
+                                  });
+                                } else {
+                                  setDialogState(() => uploadingImage = false);
+                                }
+                              } catch (e) {
+                                setDialogState(() => uploadingImage = false);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Image upload failed: $e')),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.photo_library_outlined, size: 16, color: AppColors.brandTeal),
+                            label: const Text('Change Image from Device', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('STATUS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+                    const SizedBox(height: 4),
+                    DropdownButtonFormField<String>(
+                      initialValue: ['Published', 'Draft', 'Pending'].contains(status) ? status : 'Published',
+                      items: const ['Published', 'Draft', 'Pending']
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12))))
+                          .toList(),
+                      onChanged: (v) => status = v!,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                const Text('CONTENT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                TextField(controller: contentController, maxLines: 4),
-                const SizedBox(height: 12),
-                const Text('STATUS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
-                  initialValue: ['Published', 'Draft', 'Pending'].contains(status) ? status : 'Published',
-                  items: const ['Published', 'Draft', 'Pending']
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontSize: 12))))
-                      .toList(),
-                  onChanged: (v) => status = v!,
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () async {
-              final newTitle = titleController.text.trim();
-              final newContent = contentController.text.trim();
-              if (newTitle.isEmpty) return;
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final newTitle = titleController.text.trim();
+                  final newContent = contentController.text.trim();
+                  if (newTitle.isEmpty) return;
 
-              try {
-                await FirebaseFirestore.instance.collection('safetyContent').doc(docId).update({
-                  'title': newTitle,
-                  'category': category,
-                  'content': newContent,
-                  'status': status,
-                });
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Safety guidance updated successfully!')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to update: $e')),
-                );
-              }
-            },
-            child: const Text('Save Changes', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-          ),
-        ],
+                  try {
+                    await FirebaseFirestore.instance.collection('safetyContent').doc(docId).update({
+                      'title': newTitle,
+                      'category': category,
+                      'content': newContent,
+                      'status': status,
+                      'imageUrl': imageUrl,
+                    });
+                    Navigator.of(ctx).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Safety guidance updated successfully!')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to update: $e')),
+                    );
+                  }
+                },
+                child: const Text('Save Changes', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -501,6 +572,17 @@ class AdvisorDashboardScreen extends StatelessWidget {
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HealthConsiderationsScreen())),
                   icon: const Icon(Icons.health_and_safety_outlined, size: 18, color: AppColors.textPrimary),
                   label: const Text('View Users\' Health Info →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    side: const BorderSide(color: Color(0xFFE5E7EB)),
+                  ),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdvisorAnalyticsScreen())),
+                  icon: const Icon(Icons.analytics_outlined, size: 18, color: AppColors.brandTeal),
+                  label: const Text('Clinical Analytics →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 ),
                 const SizedBox(height: 20),
 
