@@ -1,6 +1,12 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/models/workout_model.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/language_provider.dart';
+import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../main.dart';
 import '../../shared/widgets/app_network_image.dart';
@@ -8,12 +14,134 @@ import '../../shared/widgets/common_widgets.dart';
 import 'trainer_settings_screen.dart';
 import 'trainer_shell.dart';
 
-class TrainerProfileScreen extends StatelessWidget {
+class TrainerProfileScreen extends StatefulWidget {
   const TrainerProfileScreen({super.key});
+
+  @override
+  State<TrainerProfileScreen> createState() => _TrainerProfileScreenState();
+}
+
+class _TrainerProfileScreenState extends State<TrainerProfileScreen> {
+  void _showEditProfileSheet(BuildContext context) {
+    final user = context.read<AuthProvider>().currentUser;
+    final nameController = TextEditingController(text: user?.name ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Edit Trainer Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(ctx).pop()),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: Column(
+                children: [
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 36,
+                        child: ClipOval(
+                          child: AppNetworkImage(
+                            url: user?.profilePhotoUrl,
+                            width: 72,
+                            height: 72,
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () async {
+                          try {
+                            final result = await FilePicker.platform.pickFiles(
+                              type: FileType.image,
+                              allowMultiple: false,
+                              withData: true,
+                            );
+
+                            if (result != null && result.files.isNotEmpty) {
+                              final picked = result.files.first;
+                              List<int>? bytes = picked.bytes;
+                              if (bytes == null && !kIsWeb && picked.path != null) {
+                                bytes = await File(picked.path!).readAsBytes();
+                              }
+                              if (bytes != null) {
+                                final fileName = 'photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                                final photoUrl = await SupabaseService.uploadUserPhoto(
+                                  fileName: fileName,
+                                  photoBytes: bytes,
+                                );
+                                if (ctx.mounted) {
+                                  final messenger = ScaffoldMessenger.of(ctx);
+                                  await ctx.read<AuthProvider>().updateProfilePhoto(photoUrl);
+                                  messenger.showSnackBar(
+                                    const SnackBar(content: Text('⚡ Profile photo updated!'), backgroundColor: AppColors.brandTeal),
+                                  );
+                                }
+                              }
+                            }
+                          } catch (e) {
+                            debugPrint('Photo upload error: $e');
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
+                          child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text('Tap camera icon to change photo', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Trainer Name', prefixIcon: Icon(Icons.person_outline)),
+            ),
+            const SizedBox(height: 16),
+            PrimaryButton(
+              label: 'Save Changes',
+              onPressed: () async {
+                final newName = nameController.text.trim();
+                if (newName.isNotEmpty && user != null) {
+                  try {
+                    await SupabaseService.saveUserToSupabase(
+                      uid: user.id,
+                      name: newName,
+                      email: user.email,
+                      role: user.role,
+                    );
+                  } catch (_) {}
+                }
+                if (ctx.mounted) Navigator.of(ctx).pop();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
+    context.watch<LanguageProvider>(); // Listen to language updates
+
+    final isVerified = user?.verificationStatus == 'approved';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -32,7 +160,7 @@ class TrainerProfileScreen extends StatelessWidget {
             }
           },
         ),
-        title: const Text('Trainer Profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: Text(context.tr('trainer_profile'), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -41,138 +169,167 @@ class TrainerProfileScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            Center(
-              child: Column(
-                children: [
-                  Stack(
-                    alignment: Alignment.bottomRight,
+        child: StreamBuilder<List<Workout>>(
+          stream: SupabaseService.streamWorkoutsFromSupabase(),
+          builder: (context, snapshot) {
+            final workouts = snapshot.data ?? [];
+            final totalCreated = workouts.length;
+            final activePublished = workouts.where((w) => w.isPublished).length;
+            final pendingQA = workouts.where((w) => !w.isPublished).length;
+
+            return ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Center(
+                  child: Column(
                     children: [
-                      const CircleAvatar(
-                        radius: 40,
-                        child: ClipOval(
-                          child: AppNetworkImage(
-                            url: null,
-                            width: 80,
-                            height: 80,
+                      Stack(
+                        alignment: Alignment.bottomRight,
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            child: ClipOval(
+                              child: AppNetworkImage(
+                                url: user?.profilePhotoUrl,
+                                width: 80,
+                                height: 80,
+                              ),
+                            ),
                           ),
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: isVerified ? AppColors.brandTeal : AppColors.warning,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(isVerified ? Icons.check : Icons.access_time, color: Colors.white, size: 12),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(user?.name ?? 'Fitness Trainer', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      const Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          _Chip(label: 'Bodyweight', color: AppColors.brandTeal),
+                          _Chip(label: 'Mobility', color: AppColors.info),
+                          _Chip(label: 'Hypertrophy', color: AppColors.purple),
+                          _Chip(label: 'Posture', color: AppColors.warning),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('Certified Fitness Trainer & Kinesiologist', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      const SizedBox(height: 2),
+                      Text(
+                        isVerified ? '• Verified Professional' : '• Verification Pending Admin Review',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isVerified ? AppColors.brandTeal : AppColors.warning,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(color: AppColors.brandTeal, shape: BoxShape.circle),
-                        child: const Icon(Icons.check, color: Colors.white, size: 12),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: 140,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(120, 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            side: const BorderSide(color: AppColors.brandTeal),
+                          ),
+                          onPressed: () => _showEditProfileSheet(context),
+                          child: const Text('Edit Profile ✏', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(user?.name ?? 'Fitness Trainer', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  const Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    alignment: WrapAlignment.center,
+                ),
+                const SizedBox(height: 20),
+
+                // Realtime Stats Row Streamed from Supabase
+                Row(
+                  children: [
+                    Expanded(child: _TrainerStat(value: '$totalCreated', label: 'Created', icon: Icons.fitness_center, color: AppColors.info)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _TrainerStat(value: '$activePublished', label: 'Active', icon: Icons.check_circle_outline, color: AppColors.success)),
+                    const SizedBox(width: 8),
+                    Expanded(child: _TrainerStat(value: '$pendingQA', label: 'Pending QA', icon: Icons.hourglass_top, color: AppColors.warning)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // About Trainer Card
+                AppCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _Chip(label: 'Bodyweight', color: AppColors.brandTeal),
-                      _Chip(label: 'Mobility', color: AppColors.info),
-                      _Chip(label: 'Hypertrophy', color: AppColors.purple),
-                      _Chip(label: 'Posture', color: AppColors.warning),
+                      Text('About ${user?.name.split(' ').first ?? 'Trainer'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Certified Fitness Trainer dedicated to creating high-impact home workout routines, functional mobility flows, and progressive strength conditioning for trainees.',
+                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.4),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  const Text('Certified Fitness Trainer & Kinesiologist', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                  const SizedBox(height: 2),
-                  const Text('• Verified Professional', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: 140,
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(120, 32),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        side: const BorderSide(color: AppColors.brandTeal),
-                      ),
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const TrainerSettingsScreen()),
-                      ),
-                      child: const Text('Edit Profile ✏', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Stats Row
-            const Row(
-              children: [
-                Expanded(child: _TrainerStat(value: '14', label: 'Created', icon: Icons.fullscreen, color: AppColors.info)),
-                SizedBox(width: 8),
-                Expanded(child: _TrainerStat(value: '11', label: 'Active', icon: Icons.check_circle_outline, color: AppColors.success)),
-                SizedBox(width: 8),
-                Expanded(child: _TrainerStat(value: '3', label: 'Pending QA', icon: Icons.hourglass_top, color: AppColors.warning)),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // About Coach Alex Card
-            const AppCard(
-              padding: EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('About Coach Alex', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  SizedBox(height: 6),
-                  Text(
-                    'Fitness trainer with 5+ years of experience helping beginners achieve their health and fitness goals. Specializes in home workouts, functional mobility, and progressive strength conditioning.',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.4),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Certifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                Text('2 Active', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _certTile('ACE Certified Personal Trainer', 'American Council on Exercise • Valid thru 2026'),
-            const SizedBox(height: 8),
-            _certTile('NASM Corrective Exercise Special', 'National Academy of Sports Medicine'),
-            const SizedBox(height: 16),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Assigned Modules', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                Text('3 Total', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _moduleTile('Core Foundations A1', '8 exercises • Week 1-2'),
-            const SizedBox(height: 8),
-            _moduleTile('Dynamic Mobility Block', '5 exercises • Daily Routine'),
-            const SizedBox(height: 8),
-            _moduleTile('Upper Body Hypertrophy I', '6 exercises • Week 3-4'),
-            const SizedBox(height: 20),
-            Center(
-              child: TextButton(
-                onPressed: () async {
-                  final navigator = Navigator.of(context);
-                  final auth = context.read<AuthProvider>();
-                  await auth.logout();
-                  navigator.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const AppRoot()),
+                ),
+                const SizedBox(height: 16),
+
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Certifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('2 Active', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                _certTile('ACE Certified Personal Trainer', 'American Council on Exercise • Valid thru 2026'),
+                const SizedBox(height: 8),
+                _certTile('NASM Corrective Exercise Specialist', 'National Academy of Sports Medicine'),
+                const SizedBox(height: 16),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Assigned Modules / Routines', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('$totalCreated Total', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+
+                if (workouts.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: Text('No workout modules built yet.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                  )
+                else
+                  ...workouts.take(3).map((w) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _moduleTile(w.title, 'Level: ${w.level} • ${w.exercises.length} exercises • ${w.durationMinutes} min'),
+                  )),
+
+                const SizedBox(height: 20),
+                Center(
+                  child: TextButton(
+                    onPressed: () async {
+                      final navigator = Navigator.of(context);
+                      final auth = context.read<AuthProvider>();
+                      await auth.logout();
+                      navigator.pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const AppRoot()),
                         (route) => false,
-                  );
-                },
-                child: const Text('Sign Out of FitPulse', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
-              ),
-            ),
-          ],
+                      );
+                    },
+                    child: const Text('Sign Out of FitPulse', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
