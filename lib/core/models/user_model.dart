@@ -23,7 +23,9 @@ class User {
 
   factory User.fromJson(Map<String, dynamic> json) {
     final profile = json['profile'] as Map<String, dynamic>?;
-    final isCompleted = json['isProfileCompleted'] ?? (profile != null && profile.isNotEmpty);
+    final isCompleted = json['isProfileCompleted'] == true ||
+        json['profileCompleted'] == true ||
+        (json['goals'] is List && (json['goals'] as List).isNotEmpty);
 
     return User(
       id: json['id'] ?? '',

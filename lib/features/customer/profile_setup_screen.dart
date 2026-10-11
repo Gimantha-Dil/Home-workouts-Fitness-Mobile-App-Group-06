@@ -21,9 +21,21 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _heightController = TextEditingController(text: '160');
   final _weightController = TextEditingController(text: '80');
 
+  bool get _isHeightValid {
+    final h = double.tryParse(_heightController.text.trim());
+    return h != null && h >= 30 && h <= 300;
+  }
+
+  bool get _isWeightValid {
+    final w = double.tryParse(_weightController.text.trim());
+    return w != null && w >= 10 && w <= 400;
+  }
+
   @override
   void initState() {
     super.initState();
+    _heightController.addListener(() => setState(() {}));
+    _weightController.addListener(() => setState(() {}));
     _loadExistingProfile();
   }
 
@@ -72,6 +84,24 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     super.dispose();
   }
 
+  bool _validateInputs() {
+    if (!_isHeightValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid height value (e.g. 165).')),
+      );
+      return false;
+    }
+
+    if (!_isWeightValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid weight value (e.g. 68).')),
+      );
+      return false;
+    }
+
+    return true;
+  }
+
   Future<void> _saveProfileData() async {
     final user = fb.FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -113,7 +143,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(20)),
             child: const Row(
               children: [
-                Text('STEP 1 OF 3', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                Text('STEP 1 OF 2', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                 SizedBox(width: 4),
                 Text('Profile Setup', style: TextStyle(fontSize: 10, color: AppColors.brandTeal)),
                 SizedBox(width: 4),
@@ -235,7 +265,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Height', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            Row(
+                              children: [
+                                const Text('Height', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 4),
+                                Icon(_isHeightValid ? Icons.check_circle : Icons.error_outline,
+                                    size: 14, color: _isHeightValid ? AppColors.success : AppColors.danger),
+                              ],
+                            ),
                             Row(
                               children: [
                                 _unitChip('cm', _heightUnit == 'cm', () => setState(() => _heightUnit = 'cm')),
@@ -249,7 +286,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           controller: _heightController,
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _isHeightValid ? AppColors.brandTeal : AppColors.danger),
                         ),
                       ],
                     ),
@@ -262,7 +299,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Weight', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            Row(
+                              children: [
+                                const Text('Weight', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 4),
+                                Icon(_isWeightValid ? Icons.check_circle : Icons.error_outline,
+                                    size: 14, color: _isWeightValid ? AppColors.success : AppColors.danger),
+                              ],
+                            ),
                             Row(
                               children: [
                                 _unitChip('kg', _weightUnit == 'kg', () => setState(() => _weightUnit = 'kg')),
@@ -276,7 +320,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                           controller: _weightController,
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: _isWeightValid ? AppColors.brandTeal : AppColors.danger),
                         ),
                       ],
                     ),
@@ -329,6 +373,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               PrimaryButton(
                 label: 'Next →',
                 onPressed: () async {
+                  if (!_validateInputs()) return;
+
                   await _saveProfileData();
                   if (context.mounted) {
                     Navigator.of(context).pushReplacement(
@@ -339,7 +385,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               ),
               const SizedBox(height: 8),
               const Center(
-                child: Text('Step 1 of 3 • You can calibrate these anytime in Profile Settings', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                child: Text('Step 1 of 2 • You can calibrate these anytime in Profile Settings', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
               ),
             ],
           ),
