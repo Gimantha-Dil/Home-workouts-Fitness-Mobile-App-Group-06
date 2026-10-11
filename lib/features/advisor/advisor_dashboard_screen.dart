@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../admin/reports_analytics_screen.dart';
 import '../customer/advisor_chat_screen.dart';
+import 'advisor_analytics_screen.dart';
 import 'create_guidance_screen.dart';
 import 'health_considerations_screen.dart';
 import 'safety_content_screen.dart';

@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -35,6 +37,38 @@ class _FeedbackIssuesScreenState extends State<FeedbackIssuesScreen> {
   int _tab = 0; // 0: All, 1: Feedback, 2: Issues
   String _searchQuery = '';
   final _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _seedFeedbackNotifications();
+  }
+
+  Future<void> _seedFeedbackNotifications() async {
+    try {
+      final user = fb.FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final notifRef = FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('notifications');
+
+        for (final item in _items) {
+          final query = await notifRef.where('title', isEqualTo: 'New ${item.type}: ${item.id}').get();
+          if (query.docs.isEmpty) {
+            await notifRef.add({
+              'title': 'New ${item.type}: ${item.id}',
+              'message': item.body,
+              'category': item.type,
+              'timestamp': FieldValue.serverTimestamp(),
+              'targetRole': 'admin',
+              'isRead': item.status == 'Resolved',
+            });
+          }
+        }
+      }
+    } catch (_) {}
+  }
 
   final List<FeedbackItem> _items = [
     FeedbackItem(
@@ -126,11 +160,29 @@ class _FeedbackIssuesScreenState extends State<FeedbackIssuesScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
-            onPressed: () {
+            onPressed: () async {
               final text = replyCtrl.text.trim();
               if (text.isNotEmpty) {
-                Navigator.of(ctx).pop();
-                _showSnack('Official reply sent to ${item.user}!');
+                try {
+                  await FirebaseFirestore.instance.collection('feedbackReplies').doc().set({
+                    'feedbackId': item.id,
+                    'user': item.user,
+                    'originalBody': item.body,
+                    'adminReply': text,
+                    'status': 'Resolved',
+                    'repliedAt': FieldValue.serverTimestamp(),
+                  });
+
+                  setState(() {
+                    item.status = 'Resolved';
+                    item.statusColor = AppColors.success;
+                  });
+
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                  _showSnack('Official reply sent & saved to Firebase database!');
+                } catch (e) {
+                  _showSnack('Failed to send reply to Firebase: $e');
+                }
               }
             },
             child: const Text('Send Reply', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
