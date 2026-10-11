@@ -50,6 +50,14 @@ class _PublishWorkoutScreenState extends State<PublishWorkoutScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
+    if (user.verificationStatus != 'approved') {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Account Pending Admin Approval: You cannot publish workouts until the admin verifies your credentials.')),
+      );
+      setState(() => _publishing = false);
+      return;
+    }
+
     setState(() => _publishing = true);
 
     try {
