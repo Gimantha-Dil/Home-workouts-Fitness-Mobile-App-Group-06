@@ -67,6 +67,45 @@ class NotificationService {
     return true;
   }
 
+  /// Show immediate Notification
+  Future<void> showNotification({
+    required int id,
+    required String title,
+    required String body,
+    bool soundOn = true,
+  }) async {
+    if (kIsWeb || !_initialized) return;
+
+    try {
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          soundOn ? channelSoundId : channelSilentId,
+          soundOn ? 'Reminders with Sound' : 'Silent Reminders',
+          channelDescription: 'Workout reminder alerts',
+          importance: soundOn ? Importance.high : Importance.defaultImportance,
+          priority: soundOn ? Priority.high : Priority.defaultPriority,
+          playSound: soundOn,
+          enableVibration: soundOn,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: soundOn,
+        ),
+      );
+
+      await _notificationsPlugin.show(
+        id,
+        title,
+        body,
+        details,
+      );
+      debugPrint('🔔 Showed Immediate Notification #$id: $title');
+    } catch (e) {
+      debugPrint('Error showing immediate notification: $e');
+    }
+  }
+
   /// Schedule a Weekly Repeating Workout Reminder
   Future<void> scheduleWeeklyReminder({
     required int id,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
@@ -41,6 +42,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   bool _masterSwitch = true;
   bool _inactivitySwitch = true;
   bool _motiSwitch = true;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _reminderSub;
 
   final List<ReminderItem> _reminders = [
     ReminderItem(id: 101, title: 'Morning Workout', badge: 'HIGH INTENSITY', subtitle: '07:00 AM • Daily', icon: Icons.wb_sunny_outlined, color: AppColors.warning, hour: 7, minute: 0),
@@ -50,15 +52,24 @@ class _RemindersScreenState extends State<RemindersScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSavedReminders();
+    _initRealtimeStream();
   }
 
-  Future<void> _loadSavedReminders() async {
+  @override
+  void dispose() {
+    _reminderSub?.cancel();
+    super.dispose();
+  }
+
+  void _initRealtimeStream() {
     final user = fb.FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    try {
-      final docSnap = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    _reminderSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots()
+        .listen((docSnap) {
       if (docSnap.exists && docSnap.data() != null) {
         final data = docSnap.data()!;
         final savedList = data['reminders'] as List<dynamic>?;
@@ -66,7 +77,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
           _masterSwitch = data['masterReminders'] ?? true;
         }
 
-        if (savedList != null && savedList.isNotEmpty) {
+        if (savedList != null) {
           final loaded = savedList.map((item) {
             final map = Map<String, dynamic>.from(item);
             return ReminderItem(
@@ -82,14 +93,49 @@ class _RemindersScreenState extends State<RemindersScreen> {
             );
           }).toList();
 
-          setState(() {
-            _reminders.clear();
-            _reminders.addAll(loaded);
-          });
+          if (mounted) {
+            setState(() {
+              _reminders.clear();
+              _reminders.addAll(loaded);
+            });
+            _syncRemindersWithService();
+          }
         }
       }
-    } catch (_) {}
-    await _syncRemindersWithService();
+    });
+  }
+
+  Future<void> _addInAppNotification(String title, String body) async {
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // 1. Show immediate local system tray notification
+      await NotificationService().showNotification(
+        id: DateTime.now().millisecondsSinceEpoch % 10000,
+        title: title,
+        body: body,
+      );
+
+      // 2. Add in-app notification document to Firestore users/{uid}/notifications
+      final notifDoc = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('notifications')
+          .doc();
+
+      await notifDoc.set({
+        'id': notifDoc.id,
+        'title': title,
+        'message': body,
+        'timestamp': FieldValue.serverTimestamp(),
+        'category': 'Workouts',
+        'targetRole': 'customer',
+        'isRead': false,
+      });
+    } catch (e) {
+      debugPrint('Notification sync error: $e');
+    }
   }
 
   Future<void> _syncRemindersWithService() async {
@@ -210,17 +256,19 @@ class _RemindersScreenState extends State<RemindersScreen> {
                     minute: selectedTime.minute,
                   );
 
-                  setState(() {
-                    _reminders.add(newItem);
-                  });
+                  _reminders.add(newItem);
 
-                  await _syncRemindersWithService();
                   await _saveRemindersToFirestore();
+                  await _syncRemindersWithService();
+                  await _addInAppNotification(
+                    'Reminder Active: $title',
+                    'Workout reminder "$title" scheduled for $formattedTime Daily.',
+                  );
 
                   if (ctx.mounted) Navigator.of(ctx).pop();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Reminder "$title" added successfully!')),
+                      SnackBar(content: Text('Reminder "$title" added in real-time!')),
                     );
                   }
                 }
@@ -279,11 +327,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
             TextButton(
               onPressed: () async {
                 // Delete Reminder Action
-                setState(() {
-                  _reminders.removeWhere((item) => item.id == r.id);
-                });
-                await _syncRemindersWithService();
+                _reminders.removeWhere((item) => item.id == r.id);
                 await _saveRemindersToFirestore();
+                await _syncRemindersWithService();
 
                 if (ctx.mounted) Navigator.of(ctx).pop();
                 if (context.mounted) {
@@ -300,21 +346,23 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 final newTitle = titleCtrl.text.trim();
                 if (newTitle.isNotEmpty) {
                   final formattedTime = selectedTime.format(context);
-                  setState(() {
-                    r.title = newTitle;
-                    r.badge = intensity;
-                    r.hour = selectedTime.hour;
-                    r.minute = selectedTime.minute;
-                    r.subtitle = '$formattedTime • Daily';
-                  });
+                  r.title = newTitle;
+                  r.badge = intensity;
+                  r.hour = selectedTime.hour;
+                  r.minute = selectedTime.minute;
+                  r.subtitle = '$formattedTime • Daily';
 
-                  await _syncRemindersWithService();
                   await _saveRemindersToFirestore();
+                  await _syncRemindersWithService();
+                  await _addInAppNotification(
+                    'Reminder Updated: $newTitle',
+                    'Workout reminder "$newTitle" updated to $formattedTime Daily.',
+                  );
 
                   if (ctx.mounted) Navigator.of(ctx).pop();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Reminder "$newTitle" updated!')),
+                      SnackBar(content: Text('Reminder "$newTitle" updated in real-time!')),
                     );
                   }
                 }
@@ -391,8 +439,14 @@ class _RemindersScreenState extends State<RemindersScreen> {
                     activeThumbColor: AppColors.brandTeal,
                     onChanged: (v) async {
                       setState(() => _masterSwitch = v);
-                      await _syncRemindersWithService();
                       await _saveRemindersToFirestore();
+                      await _syncRemindersWithService();
+                      if (v) {
+                        await _addInAppNotification(
+                          'Reminders Enabled',
+                          'All scheduled workout reminders are now active.',
+                        );
+                      }
                     },
                   ),
                 ],
@@ -411,8 +465,8 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _reminderTile(r, (v) async {
                     setState(() => r.enabled = v);
-                    await _syncRemindersWithService();
                     await _saveRemindersToFirestore();
+                    await _syncRemindersWithService();
                   }),
                 )),
             const SizedBox(height: 4),
