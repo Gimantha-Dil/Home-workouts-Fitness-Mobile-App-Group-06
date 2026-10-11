@@ -35,6 +35,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         return Icons.verified_user_outlined;
       case 'System':
         return Icons.tune;
+      case 'Feedback':
+      case 'Issue':
+        return Icons.feedback_outlined;
       case 'Reminder':
       default:
         return Icons.notifications_active_outlined;
@@ -51,6 +54,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         return AppColors.purple;
       case 'System':
         return AppColors.info;
+      case 'Feedback':
+      case 'Issue':
+        return AppColors.warning;
       case 'Reminder':
       default:
         return AppColors.warning;
@@ -71,6 +77,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       list = list.where((n) => n.category == 'System' || n.category == 'Verification').toList();
     } else if (_filterTab == 3) {
       list = list.where((n) => n.category == 'Reminder' || n.category == 'Workout').toList();
+    } else if (_filterTab == 4) {
+      list = list.where((n) => n.category == 'Feedback' || n.category == 'Issue').toList();
     }
 
     final unreadCount = notifProvider.getUnreadCountForRole(role);
@@ -172,12 +180,14 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                 child: Row(
                   children: [
                     Expanded(child: _filterBtn('All', 0)),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Expanded(child: _filterBtn('Unread ($unreadCount)', 1)),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Expanded(child: _filterBtn('System', 2)),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Expanded(child: _filterBtn('Workouts', 3)),
+                    const SizedBox(width: 4),
+                    Expanded(child: _filterBtn('Feedback', 4)),
                   ],
                 ),
               ),

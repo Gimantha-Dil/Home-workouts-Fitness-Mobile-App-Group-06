@@ -183,9 +183,13 @@ class _WorkoutContentManagementScreenState extends State<WorkoutContentManagemen
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => AdminShell()),
-            );
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => AdminShell()),
+              );
+            }
           },
         ),
         title: const Row(

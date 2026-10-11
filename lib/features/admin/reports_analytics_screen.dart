@@ -1,8 +1,16 @@
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
 import '../../shared/widgets/stat_card.dart';
+import 'feedback_issues_screen.dart';
+import 'user_management_screen.dart';
+import 'workout_content_management_screen.dart';
 
 class ReportsAnalyticsScreen extends StatefulWidget {
   const ReportsAnalyticsScreen({super.key});
@@ -17,9 +25,83 @@ class _ReportsAnalyticsScreenState extends State<ReportsAnalyticsScreen> {
   String _exportScope = 'All Modules';
 
   void _showSnack(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
     );
+  }
+
+  Future<void> _generateCustomReport() async {
+    try {
+      await FirebaseFirestore.instance.collection('reports').add({
+        'type': 'Custom Customer Report',
+        'period': _period,
+        'totalUsers': 1248,
+        'activeUsers': 923,
+        'contentViews': 18432,
+        'reportedIssues': 6,
+        'generatedAt': FieldValue.serverTimestamp(),
+      });
+      _showSnack('Custom Customer Report generated & saved to Firebase database!');
+    } catch (e) {
+      _showSnack('Failed to generate report: $e');
+    }
+  }
+
+  Future<void> _downloadData() async {
+    try {
+      await FirebaseFirestore.instance.collection('reportDownloads').add({
+        'format': _exportFormat,
+        'scope': _exportScope,
+        'period': _period,
+        'downloadedAt': FieldValue.serverTimestamp(),
+      });
+
+      final reportContent = '''
+========================================
+FITPULSE ADMIN REPORTS & ANALYTICS
+========================================
+Reporting Period: $_period
+Export Scope: $_exportScope
+Export Format: $_exportFormat
+Generated At: ${DateTime.now().toIso8601String()}
+
+----------------------------------------
+KEY PERFORMANCE METRICS
+----------------------------------------
+- Total Users: 1,248 (+12%)
+- Active Users: 923 (+15%)
+- Content Views: 18,432 (+28%)
+- Reported Issues: 6 (-40%)
+
+----------------------------------------
+USER DISTRIBUTION BY ROLE
+----------------------------------------
+- Customers (General): 78%
+- Trainers: 12%
+- Healthcare Advisors: 8%
+- System Admins: 2%
+
+========================================
+End of Official FitPulse Report
+========================================
+''';
+
+      if (kIsWeb) {
+        final bytes = utf8.encode(reportContent);
+        final blob = html.Blob([bytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final extension = _exportFormat.contains('PDF') ? 'pdf' : _exportFormat.contains('JSON') ? 'json' : 'csv';
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', 'FitPulse_Report_${DateTime.now().millisecondsSinceEpoch}.$extension')
+          ..click();
+        html.Url.revokeObjectUrl(url);
+      }
+
+      _showSnack('Report downloaded to computer & logged to Firebase database!');
+    } catch (e) {
+      _showSnack('Download failed: $e');
+    }
   }
 
   @override
@@ -80,11 +162,11 @@ class _ReportsAnalyticsScreenState extends State<ReportsAnalyticsScreen> {
             PrimaryButton(
               label: 'Generate Custom Report ⚙',
               outlined: true,
-              onPressed: () => _showSnack('Custom report generated for $_period!'),
+              onPressed: _generateCustomReport,
             ),
             const SizedBox(height: 20),
 
-            // Stats Grid
+            // Stats Grid (Clickable Cards)
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -92,11 +174,23 @@ class _ReportsAnalyticsScreenState extends State<ReportsAnalyticsScreen> {
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
               childAspectRatio: 1.3,
-              children: const [
-                StatCard(label: 'TOTAL USERS', value: '1,248', trailing: '↗ +12%', icon: Icons.people_outline, color: AppColors.brandTeal),
-                StatCard(label: 'ACTIVE USERS', value: '923', trailing: '↗ +15%', icon: Icons.bolt, color: AppColors.info),
-                StatCard(label: 'CONTENT VIEWS', value: '18,432', trailing: '↗ +28%', icon: Icons.remove_red_eye_outlined, color: AppColors.purple),
-                StatCard(label: 'REPORTED ISSUES', value: '6', trailing: '↘ -40%', icon: Icons.bug_report_outlined, color: AppColors.warning),
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const UserManagementScreen())),
+                  child: const StatCard(label: 'TOTAL USERS', value: '1,248', trailing: '↗ +12%', icon: Icons.people_outline, color: AppColors.brandTeal),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const UserManagementScreen())),
+                  child: const StatCard(label: 'ACTIVE USERS', value: '923', trailing: '↗ +15%', icon: Icons.bolt, color: AppColors.info),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const WorkoutContentManagementScreen())),
+                  child: const StatCard(label: 'CONTENT VIEWS', value: '18,432', trailing: '↗ +28%', icon: Icons.remove_red_eye_outlined, color: AppColors.purple),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FeedbackIssuesScreen())),
+                  child: const StatCard(label: 'REPORTED ISSUES', value: '6', trailing: '↘ -40%', icon: Icons.bug_report_outlined, color: AppColors.warning),
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -237,7 +331,7 @@ class _ReportsAnalyticsScreenState extends State<ReportsAnalyticsScreen> {
                   const SizedBox(height: 14),
                   PrimaryButton(
                     label: '⬇ Download Data',
-                    onPressed: () => _showSnack('Report downloaded in $_exportFormat ($_exportScope)!'),
+                    onPressed: _downloadData,
                   ),
                 ],
               ),
@@ -257,7 +351,7 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
       child: Text(text, style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color)),
     );
