@@ -250,6 +250,37 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
     );
   }
 
+  Future<void> _handleLogout() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to log out of your FitPulse Trainer account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && mounted) {
+      final navigator = Navigator.of(context);
+      final auth = context.read<AuthProvider>();
+      await auth.logout();
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AppRoot()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
@@ -428,25 +459,25 @@ class _TrainerSettingsScreenState extends State<TrainerSettingsScreen> {
             ),
             const SizedBox(height: 24),
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFCA5A5))),
-              child: InkWell(
-                onTap: () async {
-                  final navigator = Navigator.of(context);
-                  final auth = context.read<AuthProvider>();
-                  await auth.logout();
-                  navigator.pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const AppRoot()),
-                        (route) => false,
-                  );
-                },
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.logout, color: AppColors.danger, size: 18),
-                    SizedBox(width: 8),
-                    Text('Log Out', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
-                  ],
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: _handleLogout,
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.logout, color: AppColors.danger, size: 18),
+                      SizedBox(width: 8),
+                      Text('Log Out', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
+                    ],
+                  ),
                 ),
               ),
             ),
