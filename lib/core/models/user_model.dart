@@ -25,6 +25,7 @@ class User {
     final profile = json['profile'] as Map<String, dynamic>?;
     final isCompleted = json['isProfileCompleted'] == true ||
         json['profileCompleted'] == true ||
+        (profile != null && profile.isNotEmpty) ||
         (json['goals'] is List && (json['goals'] as List).isNotEmpty);
 
     return User(
