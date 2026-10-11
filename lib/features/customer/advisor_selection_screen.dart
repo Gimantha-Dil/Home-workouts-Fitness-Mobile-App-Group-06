@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -112,6 +114,147 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
     }
   }
 
+  void _openDoctorReviewDialog(AdvisorItem advisor) async {
+    final currentUser = context.read<AuthProvider>().currentUser;
+    final user = fb.FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final reviewCtrl = TextEditingController();
+    double selectedStars = 5.0;
+    bool submitting = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              const CircleAvatar(
+                radius: 14,
+                backgroundColor: Color(0xFFCCFBF1),
+                child: Icon(Icons.star, color: AppColors.brandTeal, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Rate & Review ${advisor.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('How was your consultation and guidance experience?', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+              const SizedBox(height: 12),
+              // Interactive Star Rating Selector
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  final starVal = index + 1.0;
+                  return IconButton(
+                    icon: Icon(
+                      starVal <= selectedStars ? Icons.star : Icons.star_border,
+                      color: AppColors.warning,
+                      size: 28,
+                    ),
+                    onPressed: () {
+                      setDialogState(() => selectedStars = starVal);
+                    },
+                  );
+                }),
+              ),
+              Center(
+                child: Text('Rating: $selectedStars / 5.0', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.brandTeal)),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: reviewCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'Type your feedback or medical advice review here...',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+              onPressed: submitting
+                  ? null
+                  : () async {
+                      final reviewText = reviewCtrl.text.trim();
+                      if (reviewText.isEmpty) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(content: Text('Please enter your feedback comment.')),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => submitting = true);
+
+                      try {
+                        final reviewDoc = FirebaseFirestore.instance.collection('advisorReviews').doc();
+                        await reviewDoc.set({
+                          'id': reviewDoc.id,
+                          'advisorId': advisor.id,
+                          'advisorName': advisor.name,
+                          'customerUid': user.uid,
+                          'customerName': currentUser?.name ?? 'Trainee Patient',
+                          'rating': selectedStars,
+                          'review': reviewText,
+                          'createdAt': FieldValue.serverTimestamp(),
+                        });
+
+                        // Also update advisor document rating in Firestore
+                        try {
+                          final reviewsSnap = await FirebaseFirestore.instance
+                              .collection('advisorReviews')
+                              .where('advisorId', isEqualTo: advisor.id)
+                              .get();
+
+                          if (reviewsSnap.docs.isNotEmpty) {
+                            final allRatings = reviewsSnap.docs.map((d) => (d.data()['rating'] as num?)?.toDouble() ?? 5.0).toList();
+                            final avgRating = double.parse((allRatings.reduce((a, b) => a + b) / allRatings.length).toStringAsFixed(1));
+
+                            await FirebaseFirestore.instance.collection('users').doc(advisor.id).set({
+                              'rating': avgRating,
+                              'reviewCount': allRatings.length,
+                            }, SetOptions(merge: true));
+                          }
+                        } catch (_) {}
+
+                        if (ctx.mounted) Navigator.of(ctx).pop();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Thank you! Feedback for ${advisor.name} submitted in real-time.'),
+                              backgroundColor: AppColors.brandTeal,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setDialogState(() => submitting = false);
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text('Failed to submit feedback: $e')),
+                          );
+                        }
+                      }
+                    },
+              child: submitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Submit Feedback', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = fb.FirebaseAuth.instance.currentUser;
@@ -142,6 +285,16 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
             final assignedPhotoUrl = data?['assignedAdvisorPhotoUrl']?.toString();
 
             final hasAssigned = assignedId != null && assignedId.isNotEmpty;
+
+            final assignedAdvisorItem = AdvisorItem(
+              id: assignedId ?? '',
+              name: assignedName ?? 'Dr. Medical Advisor',
+              specialty: assignedSpecialty,
+              license: 'SLMC Certified',
+              rating: 5.0,
+              guidelinesCount: 8,
+              photoUrl: assignedPhotoUrl,
+            );
 
             return ListView(
               padding: const EdgeInsets.all(20),
@@ -209,7 +362,7 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                         Row(
                           children: [
                             Expanded(
-                              child: ElevatedButton(
+                              child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: AppColors.brandTealDark,
@@ -228,19 +381,32 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                     ),
                                   );
                                 },
-                                child: const Text('Message Doctor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                                icon: const Icon(Icons.chat_bubble_outline, size: 16, color: AppColors.brandTealDark),
+                                label: const Text('Message Doctor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFEF3C7),
+                                foregroundColor: const Color(0xFF92400E),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                minimumSize: const Size(100, 38),
+                              ),
+                              onPressed: () => _openDoctorReviewDialog(assignedAdvisorItem),
+                              icon: const Icon(Icons.star, size: 16, color: AppColors.warning),
+                              label: const Text('Rate Doctor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                            ),
+                            const SizedBox(width: 8),
                             OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.white,
                                 side: const BorderSide(color: Colors.white54),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                minimumSize: const Size(100, 38),
+                                minimumSize: const Size(80, 38),
                               ),
                               onPressed: _unselectAdvisor,
-                              child: const Text('Change Doctor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                              child: const Text('Change', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                             ),
                           ],
                         ),
@@ -325,16 +491,33 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                         ],
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(6)),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.star, size: 12, color: AppColors.warning),
-                                          const SizedBox(width: 2),
-                                          Text('${adv.rating}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
-                                        ],
-                                      ),
+                                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                                      stream: FirebaseFirestore.instance
+                                          .collection('advisorReviews')
+                                          .where('advisorId', isEqualTo: adv.id)
+                                          .snapshots(),
+                                      builder: (context, reviewSnap) {
+                                        final reviewDocs = reviewSnap.data?.docs ?? [];
+                                        double liveRating = adv.rating;
+                                        final reviewCount = reviewDocs.length;
+
+                                        if (reviewDocs.isNotEmpty) {
+                                          final ratings = reviewDocs.map((d) => (d.data()['rating'] as num?)?.toDouble() ?? 5.0).toList();
+                                          liveRating = double.parse((ratings.reduce((a, b) => a + b) / ratings.length).toStringAsFixed(1));
+                                        }
+
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(6)),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.star, size: 12, color: AppColors.warning),
+                                              const SizedBox(width: 2),
+                                              Text('$liveRating ($reviewCount)', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
+                                            ],
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
@@ -367,12 +550,24 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                             ),
                                     ),
                                     const SizedBox(width: 8),
+                                    OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.warning,
+                                        side: const BorderSide(color: AppColors.warning),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        minimumSize: const Size(80, 36),
+                                      ),
+                                      onPressed: () => _openDoctorReviewDialog(adv),
+                                      icon: const Icon(Icons.star_outline, size: 14, color: AppColors.warning),
+                                      label: const Text('Rate', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.warning)),
+                                    ),
+                                    const SizedBox(width: 8),
                                     OutlinedButton(
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: AppColors.brandTeal,
                                         side: const BorderSide(color: AppColors.brandTeal),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        minimumSize: const Size(80, 36),
+                                        minimumSize: const Size(60, 36),
                                       ),
                                       onPressed: () {
                                         Navigator.of(context).push(
@@ -389,6 +584,55 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                       child: const Text('Chat', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                                     ),
                                   ],
+                                ),
+
+                                // Real-Time Live Reviews Section
+                                StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                                  stream: FirebaseFirestore.instance
+                                      .collection('advisorReviews')
+                                      .where('advisorId', isEqualTo: adv.id)
+                                      .snapshots(),
+                                  builder: (context, reviewSnap) {
+                                    final reviews = reviewSnap.data?.docs.map((d) => d.data()).toList() ?? [];
+                                    if (reviews.isEmpty) return const SizedBox.shrink();
+
+                                    final latestReview = reviews.first;
+                                    final customerName = latestReview['customerName'] ?? 'Trainee';
+                                    final comment = latestReview['review'] ?? '';
+                                    final ratingVal = (latestReview['rating'] as num?)?.toDouble() ?? 5.0;
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(top: 10),
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF9FAFB),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: const Color(0xFFF3F4F6)),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.format_quote, size: 14, color: AppColors.brandTeal),
+                                              const SizedBox(width: 4),
+                                              Text('Latest Review by $customerName', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: AppColors.textPrimary)),
+                                              const Spacer(),
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.star, size: 10, color: AppColors.warning),
+                                                  const SizedBox(width: 2),
+                                                  Text('$ratingVal', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.warning)),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text('"$comment"', style: const TextStyle(fontSize: 10, fontStyle: FontStyle.italic, color: AppColors.textSecondary)),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
                             ),
