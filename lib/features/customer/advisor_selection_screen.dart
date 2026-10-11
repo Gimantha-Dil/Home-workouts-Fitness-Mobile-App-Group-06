@@ -112,6 +112,112 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
     }
   }
 
+  void _showFeedbackDialog(AdvisorItem advisor) {
+    double selectedRating = 5.0;
+    final commentController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text('Rate & Review ${advisor.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('YOUR RATING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  final starIndex = index + 1;
+                  return IconButton(
+                    icon: Icon(
+                      starIndex <= selectedRating ? Icons.star : Icons.star_border,
+                      color: Colors.amber,
+                      size: 28,
+                    ),
+                    onPressed: () => setDialogState(() => selectedRating = starIndex.toDouble()),
+                  );
+                }),
+              ),
+              const SizedBox(height: 12),
+              const Text('CLINICAL FEEDBACK / REVIEW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary)),
+              const SizedBox(height: 4),
+              TextField(
+                controller: commentController,
+                maxLines: 3,
+                decoration: const InputDecoration(hintText: 'Share your experience with this medical advisor...'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+              onPressed: () async {
+                final comment = commentController.text.trim();
+                final user = fb.FirebaseAuth.instance.currentUser;
+                if (user == null) return;
+
+                try {
+                  final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+                  final customerName = userDoc.data()?['name'] ?? 'FitPulse Patient';
+
+                  await FirebaseFirestore.instance.collection('advisorFeedback').add({
+                    'advisorId': advisor.id,
+                    'customerId': user.uid,
+                    'customerName': customerName,
+                    'rating': selectedRating,
+                    'comment': comment.isNotEmpty ? comment : 'Professional and thorough clinical guidance.',
+                    'timestamp': FieldValue.serverTimestamp(),
+                  });
+
+                  final feedbackQuery = await FirebaseFirestore.instance
+                      .collection('advisorFeedback')
+                      .where('advisorId', isEqualTo: advisor.id)
+                      .get();
+
+                  double total = selectedRating;
+                  int count = 1;
+                  for (var doc in feedbackQuery.docs) {
+                    final data = doc.data();
+                    if (data['rating'] != null) {
+                      total += (data['rating'] as num).toDouble();
+                      count++;
+                    }
+                  }
+                  final newAvgRating = double.parse((total / count).toStringAsFixed(1));
+
+                  await FirebaseFirestore.instance.collection('users').doc(advisor.id).update({
+                    'rating': newAvgRating,
+                  });
+
+                  Navigator.of(ctx).pop();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Thank you! Your feedback has been submitted successfully.')),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to submit feedback: $e')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Submit Review'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = fb.FirebaseAuth.instance.currentUser;
@@ -228,19 +334,40 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                     ),
                                   );
                                 },
-                                child: const Text('Message Doctor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                                child: const Text('Message', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
+                            OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: const BorderSide(color: Colors.white70),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                minimumSize: const Size(70, 38),
+                              ),
+                              onPressed: () {
+                                _showFeedbackDialog(AdvisorItem(
+                                  id: assignedId,
+                                  name: assignedName ?? 'Assigned Doctor',
+                                  specialty: assignedSpecialty,
+                                  license: 'SLMC Certified',
+                                  rating: 4.9,
+                                  guidelinesCount: 8,
+                                  photoUrl: assignedPhotoUrl,
+                                ));
+                              },
+                              child: const Text('Review', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                            ),
+                            const SizedBox(width: 8),
                             OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.white,
                                 side: const BorderSide(color: Colors.white54),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                minimumSize: const Size(100, 38),
+                                minimumSize: const Size(70, 38),
                               ),
                               onPressed: _unselectAdvisor,
-                              child: const Text('Change Doctor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                              child: const Text('Change', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                             ),
                           ],
                         ),
@@ -372,7 +499,18 @@ class _AdvisorSelectionScreenState extends State<AdvisorSelectionScreen> {
                                         foregroundColor: AppColors.brandTeal,
                                         side: const BorderSide(color: AppColors.brandTeal),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        minimumSize: const Size(80, 36),
+                                        minimumSize: const Size(65, 36),
+                                      ),
+                                      onPressed: () => _showFeedbackDialog(adv),
+                                      child: const Text('Review', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.brandTeal,
+                                        side: const BorderSide(color: AppColors.brandTeal),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                        minimumSize: const Size(65, 36),
                                       ),
                                       onPressed: () {
                                         Navigator.of(context).push(
