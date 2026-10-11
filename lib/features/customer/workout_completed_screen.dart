@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import '../../core/models/workout_model.dart';
@@ -59,6 +60,15 @@ class _WorkoutCompletedScreenState extends State<WorkoutCompletedScreen> {
         'caloriesBurned': calories,
         'exercisesCompleted': widget.session?.setResults.length ?? widget.workout.exercises.length,
         'rating': _rating,
+      });
+
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).collection('notifications').add({
+        'title': 'Workout Completed! 🏅',
+        'message': 'You successfully completed "${widget.workout.title}" and burned $calories kcal. Great job!',
+        'category': 'Workout',
+        'targetRole': 'customer',
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
       });
     } catch (_) {}
   }

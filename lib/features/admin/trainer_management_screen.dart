@@ -171,6 +171,17 @@ class _TrainerManagementScreenState extends State<TrainerManagementScreen> {
                 'status': 'rejected',
               }, SetOptions(merge: true));
 
+              try {
+                await FirebaseFirestore.instance.collection('users').doc(uid).collection('notifications').add({
+                  'title': 'Verification Update',
+                  'message': 'Your trainer verification request was not approved. Please resubmit valid credentials.',
+                  'category': 'Verification',
+                  'targetRole': 'trainer',
+                  'timestamp': FieldValue.serverTimestamp(),
+                  'isRead': false,
+                });
+              } catch (_) {}
+
               if (ctx.mounted) Navigator.of(ctx).pop();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -190,6 +201,17 @@ class _TrainerManagementScreenState extends State<TrainerManagementScreen> {
               await FirebaseFirestore.instance.collection('verificationRequests').doc(uid).set({
                 'status': 'approved',
               }, SetOptions(merge: true));
+
+              try {
+                await FirebaseFirestore.instance.collection('users').doc(uid).collection('notifications').add({
+                  'title': 'Credentials Approved! 🎉',
+                  'message': 'Congratulations! Your coaching credentials have been verified and approved by the admin. You can now publish and manage workout routines.',
+                  'category': 'Verification',
+                  'targetRole': 'trainer',
+                  'timestamp': FieldValue.serverTimestamp(),
+                  'isRead': false,
+                });
+              } catch (_) {}
 
               if (ctx.mounted) Navigator.of(ctx).pop();
               if (context.mounted) {
