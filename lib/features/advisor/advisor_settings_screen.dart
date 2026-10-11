@@ -20,11 +20,8 @@ class AdvisorSettingsScreen extends StatefulWidget {
 }
 
 class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
-  bool _consultationActive = true;
-  final String _appearance = 'Light';
-  String _language = 'English';
-
   void _showSnack(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
     );
@@ -82,154 +79,58 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Edit Advisor Profile', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 36,
-                        child: ClipOval(
-                          child: AppNetworkImage(
-                            url: user?.profilePhotoUrl,
-                            width: 72,
-                            height: 72,
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: CircleAvatar(
-                          radius: 14,
-                          backgroundColor: AppColors.brandTeal,
-                          child: IconButton(
-                            icon: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
-                            onPressed: () async {
-                              Navigator.of(ctx).pop();
-                              await _pickAndUploadProfilePhoto();
-                              if (mounted) _showEditProfileDialog(context);
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(labelText: 'Full Name'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
-              onPressed: () async {
-                final newName = controller.text.trim();
-                if (newName.isNotEmpty && user != null) {
-                  try {
-                    await FirebaseFirestore.instance.collection('users').doc(user.id).update({
-                      'name': newName,
-                    });
-                    final fbUser = fb.FirebaseAuth.instance.currentUser;
-                    if (fbUser != null) {
-                      await fbUser.updateDisplayName(newName);
-                      if (context.mounted) {
-                        await context.read<AuthProvider>().refreshUserFromFirestore(fbUser);
-                      }
-                    }
-                  } catch (_) {}
-                }
-                if (ctx.mounted) Navigator.of(ctx).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openNotificationsDialog() {
-    showDialog(
-      context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Advisor Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('• Safety Alert Notifications: Enabled', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            SizedBox(height: 6),
-            Text('• User Consultation Inquiries: Enabled', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-            SizedBox(height: 6),
-            Text('• Protocol Review Alerts: Active', style: TextStyle(fontSize: 12, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-          ],
+        title: const Text('Edit Advisor Name', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandTeal),
+            onPressed: () async {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty && user != null) {
+                await FirebaseFirestore.instance.collection('users').doc(user.id).update({'name': newName});
+                final fbUser = fb.FirebaseAuth.instance.currentUser;
+                if (fbUser != null) {
+                  await fbUser.updateDisplayName(newName);
+                  if (ctx.mounted) {
+                    await context.read<AuthProvider>().refreshUserFromFirestore(fbUser);
+                  }
+                }
+                if (ctx.mounted) Navigator.of(ctx).pop();
+                _showSnack('Name updated successfully!');
+              }
+            },
+            child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  void _openLanguageDialog() {
-    final langProvider = context.read<LanguageProvider>();
+  void _openCredentialInfoDialog() {
+    final user = context.read<AuthProvider>().currentUser;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(context.tr('language'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text('SLMC Clinical Accreditation', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
         content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _langTile(ctx, langProvider, 'English (US)', AppLanguage.en),
-            _langTile(ctx, langProvider, 'Sinhala (සිංහල)', AppLanguage.si),
-            _langTile(ctx, langProvider, 'Tamil (தமிழ்)', AppLanguage.ta),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _langTile(BuildContext ctx, LanguageProvider langProvider, String label, AppLanguage lang) {
-    final isSelected = langProvider.currentLanguage == lang;
-    return ListTile(
-      title: Text(label, style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppColors.brandTeal : AppColors.textPrimary)),
-      trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.brandTeal, size: 20) : null,
-      onTap: () {
-        langProvider.setLanguage(lang);
-        Navigator.of(ctx).pop();
-        _showSnack(lang == AppLanguage.si ? 'භාෂාව සිංහල වෙත වෙනස් කරන ලදී' : lang == AppLanguage.ta ? 'மொழி தமிழுக்கு மாற்றப்பட்டது' : 'Language set to English');
-      },
-    );
-  }
-
-  void _openCredentialsDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('SLMC Credentials & Board Registry', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('SLMC Reg No: SLMC-89241 ✓ Verified', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-            SizedBox(height: 6),
-            Text('Specialization: Sports Medicine & Physical Therapy', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-            SizedBox(height: 6),
-            Text('Affiliation: National Sports Clinic (Active)', style: TextStyle(fontSize: 11, color: AppColors.info, fontWeight: FontWeight.bold)),
+            Text('Doctor: ${user?.name ?? "Dr. Advisor"}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: 4),
+            const Text('Registry ID: SLMC #48921', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+            const SizedBox(height: 4),
+            const Text('Speciality: Cardiology & Sports Medicine', style: TextStyle(fontSize: 11, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Status: Active Clinical Accreditation', style: TextStyle(fontSize: 10, color: AppColors.success, fontWeight: FontWeight.bold)),
           ],
         ),
         actions: [
@@ -297,45 +198,26 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Advisor Help Desk', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 6),
-            const Text('Admin escalation & medical compliance support line.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+            const Row(
+              children: [
+                CircleAvatar(radius: 14, backgroundColor: Color(0xFFCCFBF1), child: Icon(Icons.help_outline, color: AppColors.brandTeal, size: 16)),
+                SizedBox(width: 8),
+                Text('Healthcare Advisor Portal Help', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text('• How to publish clinical guidance for trainees?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const Text('Tap "Create Guidance" in your dashboard, enter title and safety instructions, then set status to "Publish".', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+            const SizedBox(height: 10),
+            const Text('• How to answer patient inquiries?', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+            const Text('Check the "Patient Consultations" section on your dashboard and tap "Reply" to open a live chat.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
             const SizedBox(height: 16),
             PrimaryButton(
-              label: 'Contact Clinical Compliance →',
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                _showSnack('Inquiry sent to Clinical Compliance Officer!');
-              },
+              label: 'Understood',
+              onPressed: () => Navigator.of(ctx).pop(),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _openAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('About FitPulse Healthcare Advisor', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('FitPulse Advisor v1.0.4', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            SizedBox(height: 4),
-            Text('Clinical Licensure Terms & Board Governance', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-            SizedBox(height: 8),
-            Text('SLMC Accredited Node', style: TextStyle(fontSize: 10, color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }
@@ -429,102 +311,78 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            const Text('PREFERENCES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
-            const SizedBox(height: 10),
-            _settingTile(
-              Icons.notifications_outlined,
-              'Notifications',
-              'Safety alerts, user queries & reviews',
-              AppColors.warning,
-              onTap: _openNotificationsDialog,
-            ),
-            const SizedBox(height: 8),
-            AppCard(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  CircleAvatar(radius: 14, backgroundColor: AppColors.brandTeal.withValues(alpha: 0.12), child: const Icon(Icons.medical_services_outlined, color: AppColors.brandTeal, size: 16)),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Consultation Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                        Text('Available for user health reviews', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(6)),
-                    child: Text(_consultationActive ? '• Active' : 'Offline', style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
-                  ),
-                  const SizedBox(width: 4),
-                  Switch(
-                    value: _consultationActive,
-                    activeThumbColor: AppColors.brandTeal,
-                    onChanged: (v) {
-                      setState(() => _consultationActive = v);
-                      _showSnack(v ? 'Consultation status: Active' : 'Consultation status: Offline');
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
-            _settingTile(
-              Icons.language_outlined,
-              'Language',
-              'System terminology & copy',
-              AppColors.brandTeal,
-              badge: _language,
-              onTap: _openLanguageDialog,
+            // Real-Time Doctor Ratings Card on Settings
+            StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('advisorReviews')
+                  .where('advisorId', isEqualTo: user?.id ?? '')
+                  .snapshots(),
+              builder: (context, reviewSnap) {
+                final reviewDocs = reviewSnap.data?.docs ?? [];
+                if (reviewDocs.isEmpty) return const SizedBox.shrink();
+
+                final ratings = reviewDocs.map((d) => (d.data()['rating'] as num?)?.toDouble() ?? 5.0).toList();
+                final avgRating = double.parse((ratings.reduce((a, b) => a + b) / ratings.length).toStringAsFixed(1));
+
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.star, color: AppColors.warning, size: 20),
+                      const SizedBox(width: 8),
+                      Text('$avgRating / 5.0 Rating', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E))),
+                      const Spacer(),
+                      Text('• ${ratings.length} Patient Reviews', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF92400E))),
+                    ],
+                  ),
+                );
+              },
             ),
+
             const SizedBox(height: 20),
-            const Text('CLINICAL & SAFETY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+            const Text('CLINICAL CREDENTIALS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
             const SizedBox(height: 10),
-            _settingTile(
-              Icons.verified_user_outlined,
-              'Credentials & Registration',
-              'SLMC-89241, Sports Medicine Board',
+            _settingRow(
+              Icons.verified,
+              'SLMC Accreditation',
+              'Medical registration & specialization',
               AppColors.brandTeal,
-              onTap: _openCredentialsDialog,
+              badge: 'Verified',
+              onTap: _openCredentialInfoDialog,
             ),
             const SizedBox(height: 8),
-            _settingTile(
-              Icons.shield_outlined,
+            _settingRow(
+              Icons.assignment_outlined,
               'Safety Content Defaults',
-              'Warm-up, cooldown & precaution templates',
+              'Warm-up duration & ACSM thresholds',
               AppColors.info,
               onTap: _openSafetyDefaultsDialog,
             ),
-            const SizedBox(height: 8),
-            _settingTile(
-              Icons.lock_outline,
-              'Patient Health Privacy',
-              'HIPAA compliance, 256-bit data keys',
-              AppColors.purple,
-              onTap: _openPrivacyDialog,
-            ),
             const SizedBox(height: 20),
-            const Text('SUPPORT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+            const Text('PORTAL PREFERENCES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
             const SizedBox(height: 10),
-            _settingTile(
+            _settingRow(
               Icons.help_outline,
-              'Advisor Help Desk',
-              'Admin escalation & advisor guide',
+              'Advisor Portal Help Desk',
+              'Guideline publishing FAQs',
               AppColors.warning,
               onTap: _openHelpDeskSheet,
             ),
             const SizedBox(height: 8),
-            _settingTile(
-              Icons.info_outline,
-              'About FitPulse Advisor',
-              'Version 1.0.4 • Clinical Licensure terms',
-              AppColors.info,
-              onTap: _openAboutDialog,
+            _settingRow(
+              Icons.lock_outline,
+              'Patient Privacy Safeguards',
+              'HIPAA compliant telemetry',
+              AppColors.danger,
+              badge: 'HIPAA',
+              onTap: _openPrivacyDialog,
             ),
             const SizedBox(height: 24),
             Container(
@@ -537,7 +395,7 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
                   await auth.logout();
                   navigator.pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const AppRoot()),
-                        (route) => false,
+                    (route) => false,
                   );
                 },
                 child: const Row(
@@ -556,7 +414,7 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
     );
   }
 
-  Widget _settingTile(IconData icon, String title, String sub, Color color, {String? badge, VoidCallback? onTap}) {
+  Widget _settingRow(IconData icon, String title, String sub, Color color, {String? badge, VoidCallback? onTap}) {
     return AppCard(
       padding: const EdgeInsets.all(12),
       onTap: onTap,
@@ -569,7 +427,7 @@ class _AdvisorSettingsScreenState extends State<AdvisorSettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                Text(sub, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                Text(sub, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary), maxLines: 1, overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
