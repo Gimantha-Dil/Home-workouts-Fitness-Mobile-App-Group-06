@@ -31,6 +31,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
       try {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
           'goals': _selectedGoals.toList(),
+          'isProfileCompleted': true,
           'profileCompleted': true,
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -57,7 +58,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
             }
           },
         ),
-        title: const Text('Active Workout Session', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        title: const Text('Goal Selection', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 16),
@@ -65,7 +66,7 @@ class _GoalSelectionScreenState extends State<GoalSelectionScreen> {
             decoration: BoxDecoration(color: const Color(0xFFCCFBF1), borderRadius: BorderRadius.circular(20)),
             child: const Row(
               children: [
-                Text('STEP 2 OF 3', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                Text('STEP 2 OF 2', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                 SizedBox(width: 4),
                 Text('Profile Setup', style: TextStyle(fontSize: 10, color: AppColors.brandTeal)),
                 SizedBox(width: 4),

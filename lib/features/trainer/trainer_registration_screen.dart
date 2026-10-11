@@ -20,9 +20,28 @@ class _TrainerRegistrationScreenState extends State<TrainerRegistrationScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscure = true;
+  bool _obscureConfirm = true;
   bool _agreeTerms = false;
   bool _isSignUp = true;
   bool _loading = false;
+
+  bool get _isEmailValid => _emailController.text.contains('@') && _emailController.text.contains('.');
+  bool get _isPasswordValid => _passwordController.text.length >= (_isSignUp ? 8 : 1);
+  bool get _isConfirmPasswordValid => _confirmPasswordController.text == _passwordController.text && _confirmPasswordController.text.isNotEmpty;
+  bool get _isNameValid => _nameController.text.trim().length >= 2;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_onFieldChanged);
+    _passwordController.addListener(_onFieldChanged);
+    _confirmPasswordController.addListener(_onFieldChanged);
+    _nameController.addListener(_onFieldChanged);
+  }
+
+  void _onFieldChanged() {
+    setState(() {});
+  }
 
   @override
   void dispose() {
@@ -225,29 +244,51 @@ class _TrainerRegistrationScreenState extends State<TrainerRegistrationScreen> {
               ),
               const SizedBox(height: 20),
               if (_isSignUp) ...[
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('FULL NAME', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
-                    Text('REQUIRED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                    const Text('FULL NAME', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                    if (_isNameValid)
+                      const Row(
+                        children: [
+                          Icon(Icons.check_circle, color: AppColors.success, size: 12),
+                          SizedBox(width: 4),
+                          Text('VALID NAME', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.success)),
+                        ],
+                      )
+                    else
+                      const Text('REQUIRED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                   ],
                 ),
                 const SizedBox(height: 4),
                 TextField(
                   controller: _nameController,
                   enabled: !_loading,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Enter your full name',
-                    prefixIcon: Icon(Icons.person_outline),
+                    prefixIcon: const Icon(Icons.person_outline),
+                    suffixIcon: _nameController.text.isNotEmpty
+                        ? Icon(_isNameValid ? Icons.check_circle : Icons.error_outline,
+                            color: _isNameValid ? AppColors.success : AppColors.danger, size: 18)
+                        : null,
                   ),
                 ),
                 const SizedBox(height: 14),
               ],
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('PROFESSIONAL EMAIL', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
-                  Text('REQUIRED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
+                  const Text('PROFESSIONAL EMAIL', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                  if (_isEmailValid)
+                    const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: AppColors.success, size: 12),
+                        SizedBox(width: 4),
+                        Text('VALID EMAIL', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.success)),
+                      ],
+                    )
+                  else
+                    const Text('REQUIRED', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.brandTeal)),
                 ],
               ),
               const SizedBox(height: 4),
@@ -255,17 +296,30 @@ class _TrainerRegistrationScreenState extends State<TrainerRegistrationScreen> {
                 controller: _emailController,
                 enabled: !_loading,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Enter your professional email',
-                  prefixIcon: Icon(Icons.alternate_email),
+                  prefixIcon: const Icon(Icons.alternate_email),
+                  suffixIcon: _emailController.text.isNotEmpty
+                      ? Icon(_isEmailValid ? Icons.check_circle : Icons.error_outline,
+                          color: _isEmailValid ? AppColors.success : AppColors.danger, size: 18)
+                      : null,
                 ),
               ),
               const SizedBox(height: 14),
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('PASSWORD', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
-                  Text('MIN 8 CHARACTERS', style: TextStyle(fontSize: 8, color: AppColors.textSecondary)),
+                  const Text('PASSWORD', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                  if (_isSignUp && _isPasswordValid)
+                    const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: AppColors.success, size: 12),
+                        SizedBox(width: 4),
+                        Text('STRONG PASSWORD', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.success)),
+                      ],
+                    )
+                  else
+                    Text(_isSignUp ? 'MIN 8 CHARACTERS' : 'SECURE', style: const TextStyle(fontSize: 8, color: AppColors.textSecondary)),
                 ],
               ),
               const SizedBox(height: 4),
@@ -276,29 +330,58 @@ class _TrainerRegistrationScreenState extends State<TrainerRegistrationScreen> {
                 decoration: InputDecoration(
                   hintText: 'Enter password',
                   prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _obscure = !_obscure),
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_passwordController.text.isNotEmpty)
+                        Icon(_isPasswordValid ? Icons.check_circle : Icons.error_outline,
+                            color: _isPasswordValid ? AppColors.success : AppColors.danger, size: 18),
+                      IconButton(
+                        icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ],
                   ),
                 ),
               ),
               if (_isSignUp) ...[
                 const SizedBox(height: 14),
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('CONFIRM PASSWORD', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
-                    Text('MUST MATCH', style: TextStyle(fontSize: 8, color: AppColors.textSecondary)),
+                    const Text('CONFIRM PASSWORD', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.textSecondary, letterSpacing: 0.5)),
+                    if (_isConfirmPasswordValid)
+                      const Row(
+                        children: [
+                          Icon(Icons.check_circle, color: AppColors.success, size: 12),
+                          SizedBox(width: 4),
+                          Text('PASSWORDS MATCH', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.success)),
+                        ],
+                      )
+                    else
+                      const Text('MUST MATCH', style: TextStyle(fontSize: 8, color: AppColors.textSecondary)),
                   ],
                 ),
                 const SizedBox(height: 4),
                 TextField(
                   controller: _confirmPasswordController,
                   enabled: !_loading,
-                  obscureText: true,
-                  decoration: const InputDecoration(
+                  obscureText: _obscureConfirm,
+                  decoration: InputDecoration(
                     hintText: 'Re-enter password',
-                    prefixIcon: Icon(Icons.lock_outline),
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_confirmPasswordController.text.isNotEmpty)
+                          Icon(_isConfirmPasswordValid ? Icons.check_circle : Icons.error_outline,
+                              color: _isConfirmPasswordValid ? AppColors.success : AppColors.danger, size: 18),
+                        IconButton(
+                          icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility),
+                          onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
