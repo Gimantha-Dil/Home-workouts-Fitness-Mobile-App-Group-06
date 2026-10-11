@@ -6,7 +6,7 @@ import '../../core/providers/auth_provider.dart';
 import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/common_widgets.dart';
-import '../admin/reports_analytics_screen.dart';
+import 'advisor_analytics_screen.dart';
 import '../customer/advisor_chat_screen.dart';
 import 'create_guidance_screen.dart';
 import 'health_considerations_screen.dart';
@@ -675,7 +675,7 @@ class AdvisorDashboardScreen extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     side: const BorderSide(color: Color(0xFFE5E7EB)),
                   ),
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReportsAnalyticsScreen())),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdvisorAnalyticsScreen())),
                   icon: const Icon(Icons.analytics_outlined, size: 18, color: AppColors.brandTeal),
                   label: const Text('Clinical Analytics →', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                 ),
