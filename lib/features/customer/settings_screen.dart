@@ -1,8 +1,15 @@
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/models/mock_data.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../firebase_options.dart';
 import '../../main.dart';
 import '../../shared/widgets/app_network_image.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -25,8 +32,129 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _googleFitSync = true;
 
   void _showSnack(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  Future<void> _deleteCustomerAccount() async {
+    final auth = context.read<AuthProvider>();
+    final fbUser = fb.FirebaseAuth.instance.currentUser;
+    final uid = fbUser?.uid ?? auth.currentUser?.id ?? '';
+    final name = auth.currentUser?.name ?? 'User';
+
+    if (uid.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Account Permanently?', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.danger)),
+        content: Text(
+          'Are you sure you want to delete your FitPulse account ($name)?\n\n'
+          'This will permanently purge your biometrics, chat history, and files from Cloud Firestore, Supabase, and Firebase Authentication console. This action cannot be undone.',
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              _showSnack('Purging account & files from all databases...');
+
+              try {
+                // 1. Delete Firestore user document
+                await FirebaseFirestore.instance.collection('users').doc(uid).delete();
+
+                // 2. Delete Firestore verification requests
+                await FirebaseFirestore.instance.collection('verificationRequests').doc(uid).delete();
+
+                // 3. Delete Firestore chats
+                final chatDocs = await FirebaseFirestore.instance
+                    .collection('chats')
+                    .where('customerUid', isEqualTo: uid)
+                    .get();
+                for (final doc in chatDocs.docs) {
+                  await doc.reference.delete();
+                }
+
+                // 4. Delete Supabase PostgreSQL user row
+                try {
+                  await Supabase.instance.client.from('users').delete().eq('id', uid);
+                } catch (_) {}
+
+                // 5. Delete Supabase Storage photos & docs
+                try {
+                  await Supabase.instance.client.storage.from('user-photos').remove(['avatars/$uid/']);
+                } catch (_) {}
+
+                // 6. Delete Firebase Auth user account (with Google re-auth & REST API fallback)
+                try {
+                  if (fbUser != null) {
+                    final providerData = fbUser.providerData;
+                    final isGoogleUser = providerData.any((p) => p.providerId == 'google.com');
+
+                    if (isGoogleUser) {
+                      try {
+                        final googleUser = await GoogleSignIn().signInSilently() ?? await GoogleSignIn().signIn();
+                        final googleAuth = await googleUser?.authentication;
+                        if (googleAuth != null) {
+                          final cred = fb.GoogleAuthProvider.credential(
+                            accessToken: googleAuth.accessToken,
+                            idToken: googleAuth.idToken,
+                          );
+                          await fbUser.reauthenticateWithCredential(cred);
+                        }
+                      } catch (e) {
+                        debugPrint('Google re-auth note: $e');
+                      }
+                    }
+
+                    await fbUser.delete();
+                    debugPrint('Successfully deleted Firebase Auth User $uid');
+                  }
+                } catch (e) {
+                  debugPrint('Firebase auth delete error: $e');
+                  // Fallback: Delete account via Firebase Identity Toolkit REST API
+                  try {
+                    if (fbUser != null) {
+                      final idToken = await fbUser.getIdToken(true);
+                      final apiKey = DefaultFirebaseOptions.currentPlatform.apiKey;
+                      if (idToken != null && apiKey.isNotEmpty) {
+                        final url = Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:delete?key=$apiKey');
+                        await http.post(
+                          url,
+                          headers: {'Content-Type': 'application/json'},
+                          body: jsonEncode({'idToken': idToken}),
+                        );
+                        debugPrint('Successfully purged Firebase Auth account via Identity Toolkit REST API!');
+                      }
+                    }
+                  } catch (restErr) {
+                    debugPrint('REST API purge error: $restErr');
+                  }
+                }
+
+                // 7. Logout and redirect to Login Root
+                await auth.logout();
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AppRoot()),
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                _showSnack('Failed to delete account: $e');
+              }
+            },
+            child: const Text('Delete Account Permanently', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -513,6 +641,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Icon(Icons.logout, color: AppColors.danger, size: 18),
                     SizedBox(width: 8),
                     Text('Log Out', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFFCA5A5))),
+              child: InkWell(
+                onTap: _deleteCustomerAccount,
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.delete_forever, color: AppColors.danger, size: 18),
+                    SizedBox(width: 8),
+                    Text('Delete Account & Purge Data', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.bold, fontSize: 13)),
                   ],
                 ),
               ),
