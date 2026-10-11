@@ -934,42 +934,6 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-
-          // Author Footer Row
-          const Row(
-            children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundImage: NetworkImage('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop'),
-              ),
-              SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Coach Alex Carter',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                  ),
-                  Text(
-                    'Master Fitness Lead',
-                    style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
-                  ),
-                ],
-              ),
-              Spacer(),
-              Row(
-                children: [
-                  Icon(Icons.verified, size: 14, color: Color(0xFF475569)),
-                  SizedBox(width: 4),
-                  Text(
-                    'Verified Protocol',
-                    style: TextStyle(fontSize: 10, color: Color(0xFF475569), fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -1900,8 +1864,6 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   }
 
   Widget _buildStep3VideoUploadContent() {
-    final fileNameText = _uploadedFileName.isNotEmpty ? _uploadedFileName : 'barbell_back_squat_raw_v1.mp4';
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1909,9 +1871,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
+            const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text('🎥 STEP 3 OF 4 • VIDEO FOOTAGE', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF475569), letterSpacing: 0.5)),
                 SizedBox(height: 2),
                 Text('Upload Exercise Video', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
@@ -1990,9 +1952,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Icon(Icons.info_outline, size: 12, color: Color(0xFF64748B)),
                     SizedBox(width: 4),
                     Text('MP4, MOV (Max 100MB • 1080p Recommended)', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
@@ -2096,9 +2058,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 color: const Color(0xFF0F172A),
                 child: Column(
                   children: [
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
+                      children: [
                         Text('● TRIMMER STUDIO', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8), letterSpacing: 0.5)),
                         Text('Active Duration: 00:20', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
                       ],
@@ -2157,7 +2119,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0284C7).withOpacity(0.3),
+                            color: const Color(0xFF0284C7).withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text('Trim Area (00:20 Total)', style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8))),
@@ -2168,9 +2130,9 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                     const SizedBox(height: 10),
 
                     // Controls Row
-                    Row(
+                    const Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: const [
+                      children: [
                         Row(
                           children: [
                             Icon(Icons.rotate_right, size: 14, color: Colors.white70),
