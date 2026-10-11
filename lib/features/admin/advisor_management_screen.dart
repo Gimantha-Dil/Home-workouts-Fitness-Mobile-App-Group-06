@@ -104,6 +104,17 @@ class _AdvisorManagementScreenState extends State<AdvisorManagementScreen> {
                 'status': 'rejected',
               }, SetOptions(merge: true));
 
+              try {
+                await FirebaseFirestore.instance.collection('users').doc(uid).collection('notifications').add({
+                  'title': 'Verification Update',
+                  'message': 'Your advisor verification request was not approved. Please resubmit valid credentials.',
+                  'category': 'Verification',
+                  'targetRole': 'advisor',
+                  'timestamp': FieldValue.serverTimestamp(),
+                  'isRead': false,
+                });
+              } catch (_) {}
+
               if (ctx.mounted) Navigator.of(ctx).pop();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -123,6 +134,17 @@ class _AdvisorManagementScreenState extends State<AdvisorManagementScreen> {
               await FirebaseFirestore.instance.collection('verificationRequests').doc(uid).set({
                 'status': 'approved',
               }, SetOptions(merge: true));
+
+              try {
+                await FirebaseFirestore.instance.collection('users').doc(uid).collection('notifications').add({
+                  'title': 'Credentials Approved! 🎉',
+                  'message': 'Congratulations! Your credentials have been verified and approved by the admin. You can now publish safety guidance protocols.',
+                  'category': 'Verification',
+                  'targetRole': 'advisor',
+                  'timestamp': FieldValue.serverTimestamp(),
+                  'isRead': false,
+                });
+              } catch (_) {}
 
               if (ctx.mounted) Navigator.of(ctx).pop();
               if (context.mounted) {
