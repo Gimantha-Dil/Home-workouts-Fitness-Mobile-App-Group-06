@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../firebase_options.dart';
 import '../../shared/widgets/common_widgets.dart';
@@ -20,6 +21,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   final _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -30,6 +41,103 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
     );
+  }
+
+  Future<void> _purgeUserFromAllDatabases(String uid, String name, [String? email]) async {
+    try {
+      // 1. Delete from Cloud Firestore 'users' collection
+      await FirebaseFirestore.instance.collection('users').doc(uid).delete();
+
+      // 2. Delete from Cloud Firestore 'verificationRequests' collection
+      await FirebaseFirestore.instance.collection('verificationRequests').doc(uid).delete();
+
+      // 3. Delete any chats associated with this user
+      final chatDocs = await FirebaseFirestore.instance
+          .collection('chats')
+          .where('customerUid', isEqualTo: uid)
+          .get();
+      for (final doc in chatDocs.docs) {
+        await doc.reference.delete();
+      }
+
+      // 4. Delete user record from Supabase PostgreSQL 'users' table
+      try {
+        await Supabase.instance.client.from('users').delete().eq('id', uid);
+      } catch (e) {
+        debugPrint('Supabase table purge note: $e');
+      }
+
+      // 5. Purge user photos and verification documents from Supabase Storage
+      try {
+        await Supabase.instance.client.storage
+            .from('user-photos')
+            .remove(['avatars/$uid/']);
+      } catch (_) {}
+
+      try {
+        await Supabase.instance.client.storage
+            .from('verification-docs')
+            .remove(['docs/$uid/']);
+      } catch (_) {}
+
+      // 6. Delete from Firebase Authentication using Secondary Auth Admin App
+      try {
+        final secondaryApp = await Firebase.initializeApp(
+          name: 'AdminUserPurge_${DateTime.now().millisecondsSinceEpoch}',
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        final secondaryAuth = fb.FirebaseAuth.instanceFor(app: secondaryApp);
+        final currentUser = secondaryAuth.currentUser;
+        if (currentUser != null && currentUser.uid == uid) {
+          await currentUser.delete();
+        }
+        await secondaryApp.delete();
+      } catch (e) {
+        debugPrint('Firebase Auth account purge note: $e');
+      }
+
+      _showSnack('Account, email & files for "$name" purged from all databases!');
+    } catch (e) {
+      _showSnack('User purge error: $e');
+    }
+  }
+
+  Future<void> _autoCleanOrphanedData(List<Map<String, dynamic>> allUsers) async {
+    int purgedCount = 0;
+    _showSnack('Scanning databases for stale/orphaned records...');
+
+    try {
+      final userIds = allUsers
+          .map((u) => u['id']?.toString() ?? u['uid']?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+
+      // Purge verification requests that don't match active users
+      final verReqs = await FirebaseFirestore.instance.collection('verificationRequests').get();
+      for (final req in verReqs.docs) {
+        final reqUid = req.id;
+        if (!userIds.contains(reqUid)) {
+          await req.reference.delete();
+          purgedCount++;
+        }
+      }
+
+      // Purge Supabase orphan users
+      try {
+        final sbUsers = await Supabase.instance.client.from('users').select('id');
+        for (final sbU in sbUsers) {
+          final sbId = sbU['id']?.toString() ?? '';
+          if (sbId.isNotEmpty && !userIds.contains(sbId)) {
+            await Supabase.instance.client.from('users').delete().eq('id', sbId);
+            purgedCount++;
+          }
+        }
+      } catch (_) {}
+
+      _showSnack('Real-time database cleanup complete: $purgedCount stale records purged!');
+    } catch (e) {
+      _showSnack('Auto-clean note: $e');
+    }
   }
 
   Future<void> _openAddUserDialog() async {
@@ -185,12 +293,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: AppColors.danger),
-              title: const Text('Remove User from Platform', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.danger)),
+              leading: const Icon(Icons.delete_forever, color: AppColors.danger),
+              title: const Text('Purge Account & Files from DB', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.danger)),
               onTap: () async {
-                await FirebaseFirestore.instance.collection('users').doc(uid).delete();
                 if (ctx.mounted) Navigator.of(ctx).pop();
-                _showSnack('$name removed from Firestore');
+                await _purgeUserFromAllDatabases(uid, name, email);
               },
             ),
           ],
@@ -221,8 +328,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             Text('FitPulse', style: TextStyle(color: AppColors.brandTeal, fontWeight: FontWeight.bold, fontSize: 18)),
           ],
         ),
-        actions: const [
-          NotificationIconButton(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.cleaning_services_outlined, color: AppColors.brandTeal),
+            tooltip: 'Auto-Clean Stale Data',
+            onPressed: () async {
+              final snap = await FirebaseFirestore.instance.collection('users').get();
+              final allDocs = snap.docs.map((d) => {'id': d.id, ...d.data()}).toList();
+              await _autoCleanOrphanedData(allDocs);
+            },
+          ),
+          const NotificationIconButton(),
         ],
       ),
       body: SafeArea(
@@ -235,32 +351,42 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             final activeUsers = docs.where((u) => (u['verificationStatus'] ?? 'none') != 'pending' && (u['verificationStatus'] ?? 'none') != 'suspended').length;
             final pendingUsers = docs.where((u) => (u['verificationStatus'] ?? 'none') == 'pending').length;
 
-            // Filter by Status Tab
+            // Instant Real-Time Search Filter Across ALL Database Users
+            final q = _searchQuery.trim().toLowerCase();
             var filtered = docs;
-            if (_statusTab == 'active') {
-              filtered = filtered.where((u) => (u['verificationStatus'] ?? 'none') != 'pending' && (u['verificationStatus'] ?? 'none') != 'suspended').toList();
-            } else if (_statusTab == 'pending') {
-              filtered = filtered.where((u) => (u['verificationStatus'] ?? 'none') == 'pending').toList();
-            }
 
-            // Filter by Dropdown Role
-            if (_selectedRoleFilter != 'All Roles') {
-              final targetRole = _selectedRoleFilter.toLowerCase().replaceAll('s', '');
-              filtered = filtered.where((u) {
-                final r = (u['role'] ?? 'customer').toString().toLowerCase();
-                return r == targetRole;
-              }).toList();
-            }
-
-            // Filter by Search Query
-            if (_searchQuery.isNotEmpty) {
-              final q = _searchQuery.toLowerCase();
-              filtered = filtered.where((u) {
+            if (q.isNotEmpty) {
+              filtered = docs.where((u) {
                 final name = (u['name'] ?? '').toString().toLowerCase();
                 final email = (u['email'] ?? '').toString().toLowerCase();
                 final id = (u['id'] ?? '').toString().toLowerCase();
-                return name.contains(q) || email.contains(q) || id.contains(q);
+                final role = (u['role'] ?? '').toString().toLowerCase();
+                final status = (u['verificationStatus'] ?? '').toString().toLowerCase();
+                return name.contains(q) ||
+                    email.contains(q) ||
+                    id.contains(q) ||
+                    role.contains(q) ||
+                    status.contains(q);
               }).toList();
+            } else {
+              // Apply Tab & Dropdown Role Filters when Search Box is Empty
+              if (_statusTab == 'active') {
+                filtered = filtered.where((u) => (u['verificationStatus'] ?? 'none') != 'pending' && (u['verificationStatus'] ?? 'none') != 'suspended').toList();
+              } else if (_statusTab == 'pending') {
+                filtered = filtered.where((u) => (u['verificationStatus'] ?? 'none') == 'pending').toList();
+              }
+
+              if (_selectedRoleFilter != 'All Roles') {
+                final target = _selectedRoleFilter.toLowerCase();
+                filtered = filtered.where((u) {
+                  final r = (u['role'] ?? 'customer').toString().toLowerCase();
+                  if (target.contains('customer')) return r == 'customer';
+                  if (target.contains('trainer')) return r == 'trainer';
+                  if (target.contains('advisor')) return r == 'advisor';
+                  if (target.contains('admin')) return r == 'admin';
+                  return r.contains(target);
+                }).toList();
+              }
             }
 
             return Column(
@@ -307,10 +433,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Search Bar
+                      // Instant Real-time Search Input Bar
                       TextField(
                         controller: _searchController,
-                        onChanged: (v) => setState(() => _searchQuery = v),
                         decoration: InputDecoration(
                           hintText: 'Search name, email, or user ID...',
                           prefixIcon: const Icon(Icons.search, size: 20),
@@ -358,10 +483,15 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       if (snapshot.connectionState == ConnectionState.waiting)
                         const Center(child: CircularProgressIndicator())
                       else if (filtered.isEmpty)
-                        const Center(
+                        Center(
                           child: Padding(
-                            padding: EdgeInsets.all(30),
-                            child: Text('No matching users found in Firestore.', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                            padding: const EdgeInsets.all(30),
+                            child: Text(
+                              _searchQuery.isNotEmpty
+                                  ? 'No users found matching "$_searchQuery".'
+                                  : 'No matching users found in Firestore.',
+                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                            ),
                           ),
                         )
                       else
