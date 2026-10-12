@@ -33,6 +33,96 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   final _restController = TextEditingController(text: '30');
   final String _exerciseDifficulty = 'Beginner';
 
+  // Dynamic Muscle Groups
+  final List<(String, Color, Color, Color)> _muscleGroups = [
+    ('☉ Chest / Pectoralis', const Color(0xFFECFDF5), const Color(0xFF047857), const Color(0xFFA7F3D0)),
+    ('☉ Triceps Brachii', const Color(0xFFE0F2FE), const Color(0xFF0284C7), const Color(0xFFBAE6FD)),
+    ('☉ Anterior Deltoid', const Color(0xFFFEF3C7), const Color(0xFFD97706), const Color(0xFFFDE68A)),
+    ('☉ Core Stabilizers', const Color(0xFFF3E8FF), const Color(0xFF7C3AED), const Color(0xFFE9D5FF)),
+  ];
+
+  void _showAddMuscleGroupDialog() {
+    final groupController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Target Muscle Group', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Enter custom muscle group or select from presets:', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+              const SizedBox(height: 10),
+              TextField(
+                controller: groupController,
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Quadriceps / Hamstrings',
+                  prefixIcon: Icon(Icons.fitness_center, size: 18),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text('Popular Muscle Presets:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  'Lats / Upper Back',
+                  'Quads & Hamstrings',
+                  'Glutes & Hips',
+                  'Biceps Brachii',
+                  'Trapezius & Shoulders',
+                  'Calves & Ankles',
+                ].map((preset) {
+                  return InkWell(
+                    onTap: () {
+                      groupController.text = preset;
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: Text(preset, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00A887)),
+            onPressed: () {
+              final text = groupController.text.trim();
+              if (text.isNotEmpty) {
+                final label = text.startsWith('☉') ? text : '☉ $text';
+                setState(() {
+                  _muscleGroups.add((
+                    label,
+                    const Color(0xFFECFDF5),
+                    const Color(0xFF047857),
+                    const Color(0xFFA7F3D0),
+                  ));
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('⚡ Muscle group "$text" added!'), backgroundColor: const Color(0xFF00A887)),
+                );
+              }
+              Navigator.of(ctx).pop();
+            },
+            child: const Text('Add Group'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // Step 3 - instructions & tips
   final List<TextEditingController> _instructionControllers = [
     TextEditingController(text: 'Start in a kneeling position on the mat with hands slightly wider than shoulder-width.'),
@@ -1309,23 +1399,51 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('🧍 Target Muscle Groups', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
-                  Text('+ Add Group', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  const Text('🧍 Target Muscle Groups', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  InkWell(
+                    onTap: _showAddMuscleGroupDialog,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 12, color: Color(0xFF047857)),
+                          SizedBox(width: 2),
+                          Text('Add Group', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF047857))),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
-              const Wrap(
+              Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: [
-                  _MuscleChipItem(label: '☉ Chest / Pectoralis', bg: Color(0xFFECFDF5), textCol: Color(0xFF047857), borderCol: Color(0xFFA7F3D0)),
-                  _MuscleChipItem(label: '☉ Triceps Brachii', bg: Color(0xFFE0F2FE), textCol: Color(0xFF0284C7), borderCol: Color(0xFFBAE6FD)),
-                  _MuscleChipItem(label: '☉ Anterior Deltoid', bg: Color(0xFFFEF3C7), textCol: Color(0xFFD97706), borderCol: Color(0xFFFDE68A)),
-                  _MuscleChipItem(label: '☉ Core Stabilizers', bg: Color(0xFFF3E8FF), textCol: Color(0xFF7C3AED), borderCol: Color(0xFFE9D5FF)),
-                ],
+                children: _muscleGroups.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final (label, bg, textCol, borderCol) = entry.value;
+                  return InkWell(
+                    onLongPress: () {
+                      setState(() {
+                        _muscleGroups.removeAt(idx);
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('🗑 Muscle group removed.')),
+                      );
+                    },
+                    child: _MuscleChipItem(label: label, bg: bg, textCol: textCol, borderCol: borderCol),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 12),
               Row(
